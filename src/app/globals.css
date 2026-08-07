@@ -1,0 +1,415 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: var(--font-sans);
+    --font-mono: var(--font-mono);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+
+    /* The accent hue for text, icons and active state. `--primary` is the
+       fill it pairs with; the two are different lightnesses because one
+       carries white text and the other sits on the page background. */
+    --color-brand: var(--brand);
+
+    /* Board columns and other recessed panels. Distinguished from `--card`
+       by depth, not by a border. */
+    --color-surface: var(--surface);
+    --color-surface-foreground: var(--surface-foreground);
+
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+
+    /* Depth replaces borders as the way surfaces separate. `lift` is the
+       resting state of a card, `drag` is the same card in the air. */
+    --shadow-soft: var(--elevation-soft);
+    --shadow-lift: var(--elevation-lift);
+    --shadow-drag: var(--elevation-drag);
+    --shadow-panel: var(--elevation-panel);
+}
+
+/**
+ * Neutral, very low chroma, with a faint cool cast so large surfaces read as
+ * grey rather than beige. Dark is the default experience; light is a full
+ * peer, not an afterthought.
+ */
+:root {
+    --radius: 0.65rem;
+
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.16 0.004 285);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.16 0.004 285);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.16 0.004 285);
+
+    /* Deep enough that white text clears 4.5:1. A brighter accent that fails
+       contrast on its own button is the usual way this token goes wrong. */
+    --primary: oklch(0.49 0.2 272);
+    --primary-foreground: oklch(0.99 0 0);
+    --brand: oklch(0.48 0.19 272);
+
+    --secondary: oklch(0.968 0.002 285);
+    --secondary-foreground: oklch(0.21 0.006 285);
+    --muted: oklch(0.968 0.002 285);
+    --muted-foreground: oklch(0.52 0.008 285);
+    --accent: oklch(0.962 0.003 285);
+    --accent-foreground: oklch(0.21 0.006 285);
+    --destructive: oklch(0.577 0.222 27.2);
+    --border: oklch(0.918 0.003 285);
+    --input: oklch(0.918 0.003 285);
+    --ring: oklch(0.55 0.19 272);
+
+    --surface: oklch(0.973 0.002 285);
+    --surface-foreground: oklch(0.16 0.004 285);
+
+    --chart-1: oklch(0.55 0.19 272);
+    --chart-2: oklch(0.62 0.14 220);
+    --chart-3: oklch(0.66 0.13 165);
+    --chart-4: oklch(0.72 0.14 85);
+    --chart-5: oklch(0.62 0.17 25);
+
+    --sidebar: oklch(0.985 0.002 285);
+    --sidebar-foreground: oklch(0.16 0.004 285);
+    --sidebar-primary: oklch(0.49 0.2 272);
+    --sidebar-primary-foreground: oklch(0.99 0 0);
+    --sidebar-accent: oklch(0.945 0.003 285);
+    --sidebar-accent-foreground: oklch(0.21 0.006 285);
+    --sidebar-border: oklch(0.918 0.003 285);
+    --sidebar-ring: oklch(0.55 0.19 272);
+
+    --elevation-soft: 0 1px 2px oklch(0.16 0.004 285 / 6%);
+    --elevation-lift:
+        0 1px 2px oklch(0.16 0.004 285 / 6%),
+        0 4px 12px oklch(0.16 0.004 285 / 6%);
+    --elevation-drag:
+        0 2px 4px oklch(0.16 0.004 285 / 8%),
+        0 12px 32px oklch(0.16 0.004 285 / 14%);
+    --elevation-panel:
+        0 8px 24px oklch(0.16 0.004 285 / 8%),
+        0 24px 64px oklch(0.16 0.004 285 / 10%);
+
+    /* Ordered by urgency, not by hue family, so the ramp reads at a glance. */
+    --priority-low: oklch(0.55 0.1 245);
+    --priority-medium: oklch(0.58 0.13 78);
+    --priority-high: oklch(0.56 0.16 45);
+    --priority-urgent: oklch(0.53 0.2 25);
+
+    /* Label swatches. Stored as a name on the record, resolved to a colour
+       here, so a board's labels restyle with the theme instead of clashing. */
+    --label-slate: oklch(0.5 0.02 260);
+    --label-blue: oklch(0.52 0.16 250);
+    --label-green: oklch(0.5 0.13 155);
+    --label-amber: oklch(0.55 0.13 80);
+    --label-orange: oklch(0.55 0.16 50);
+    --label-red: oklch(0.53 0.19 25);
+    --label-purple: oklch(0.5 0.18 300);
+    --label-pink: oklch(0.55 0.18 350);
+    --label-teal: oklch(0.5 0.11 195);
+}
+
+.dark {
+    --background: oklch(0.145 0.005 285);
+    --foreground: oklch(0.968 0.002 285);
+    --card: oklch(0.192 0.005 285);
+    --card-foreground: oklch(0.968 0.002 285);
+    --popover: oklch(0.205 0.005 285);
+    --popover-foreground: oklch(0.968 0.002 285);
+
+    --primary: oklch(0.52 0.21 272);
+    --primary-foreground: oklch(0.99 0 0);
+    --brand: oklch(0.74 0.14 274);
+
+    --secondary: oklch(0.245 0.006 285);
+    --secondary-foreground: oklch(0.968 0.002 285);
+    --muted: oklch(0.235 0.006 285);
+    --muted-foreground: oklch(0.685 0.01 285);
+    --accent: oklch(0.258 0.006 285);
+    --accent-foreground: oklch(0.968 0.002 285);
+    --destructive: oklch(0.665 0.19 23);
+    --border: oklch(1 0 0 / 8%);
+    --input: oklch(1 0 0 / 12%);
+    --ring: oklch(0.62 0.18 273);
+
+    --surface: oklch(0.172 0.005 285);
+    --surface-foreground: oklch(0.968 0.002 285);
+
+    --chart-1: oklch(0.68 0.17 273);
+    --chart-2: oklch(0.7 0.13 220);
+    --chart-3: oklch(0.74 0.12 165);
+    --chart-4: oklch(0.8 0.13 85);
+    --chart-5: oklch(0.7 0.16 25);
+
+    --sidebar: oklch(0.163 0.005 285);
+    --sidebar-foreground: oklch(0.968 0.002 285);
+    --sidebar-primary: oklch(0.52 0.21 272);
+    --sidebar-primary-foreground: oklch(0.99 0 0);
+    --sidebar-accent: oklch(0.245 0.006 285);
+    --sidebar-accent-foreground: oklch(0.968 0.002 285);
+    --sidebar-border: oklch(1 0 0 / 8%);
+    --sidebar-ring: oklch(0.62 0.18 273);
+
+    /* Shadows carry almost nothing on a dark background, so depth comes from
+       a hairline highlight on the top edge as well as the cast below. */
+    --elevation-soft:
+        inset 0 1px 0 oklch(1 0 0 / 4%), 0 1px 2px oklch(0 0 0 / 30%);
+    --elevation-lift:
+        inset 0 1px 0 oklch(1 0 0 / 5%), 0 1px 2px oklch(0 0 0 / 32%),
+        0 4px 12px oklch(0 0 0 / 24%);
+    --elevation-drag:
+        inset 0 1px 0 oklch(1 0 0 / 7%), 0 2px 4px oklch(0 0 0 / 40%),
+        0 16px 40px oklch(0 0 0 / 45%);
+    --elevation-panel:
+        inset 0 1px 0 oklch(1 0 0 / 5%), 0 8px 24px oklch(0 0 0 / 40%),
+        0 24px 64px oklch(0 0 0 / 45%);
+
+    --priority-low: oklch(0.7 0.09 245);
+    --priority-medium: oklch(0.78 0.13 80);
+    --priority-high: oklch(0.74 0.15 48);
+    --priority-urgent: oklch(0.71 0.18 22);
+
+    --label-slate: oklch(0.72 0.02 260);
+    --label-blue: oklch(0.72 0.13 250);
+    --label-green: oklch(0.74 0.13 155);
+    --label-amber: oklch(0.8 0.12 82);
+    --label-orange: oklch(0.76 0.14 52);
+    --label-red: oklch(0.71 0.16 22);
+    --label-purple: oklch(0.72 0.14 300);
+    --label-pink: oklch(0.74 0.14 350);
+    --label-teal: oklch(0.74 0.1 190);
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    html {
+        @apply font-sans;
+        -webkit-text-size-adjust: 100%;
+        /* Next 16 dropped the implicit smooth scroll; opt in explicitly. */
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Every interactive element gets the same visible focus ring, so keyboard
+       navigation is never a guessing game. */
+    :focus-visible {
+        @apply outline-ring outline-2 outline-offset-2;
+    }
+
+    ::selection {
+        @apply bg-brand/25;
+    }
+
+    /* Respect a user's reduced-motion preference across the whole app. */
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+}
+
+@layer components {
+    /**
+     * Colour-carrying chips: labels and priorities.
+     *
+     * The caller sets `--chip-color` to one of the `--label-*` or `--priority-*`
+     * tokens and everything else derives from it with `color-mix`, so nine
+     * label colours cost nine tokens rather than twenty-seven, and the tint
+     * stays correct in both themes without a second set of values.
+     */
+    .chip-tinted {
+        background-color: color-mix(
+            in oklch,
+            var(--chip-color) 16%,
+            transparent
+        );
+        color: var(--chip-color);
+        box-shadow: inset 0 0 0 1px
+            color-mix(in oklch, var(--chip-color) 22%, transparent);
+    }
+
+    .chip-dot {
+        background-color: var(--chip-color);
+    }
+
+    /**
+     * Board columns scroll a lot and a default scrollbar is a heavy grey slab
+     * across an otherwise quiet surface. Thin, low-contrast, and it fades in
+     * only while the region is hovered.
+     */
+    .scrollbar-subtle {
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+        transition: scrollbar-color 0.2s ease;
+    }
+
+    .scrollbar-subtle:hover,
+    .scrollbar-subtle:focus-within {
+        scrollbar-color: var(--border) transparent;
+    }
+
+    .scrollbar-subtle::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .scrollbar-subtle::-webkit-scrollbar-thumb {
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        border-radius: 9999px;
+        background-color: transparent;
+        transition: background-color 0.2s ease;
+    }
+
+    .scrollbar-subtle:hover::-webkit-scrollbar-thumb,
+    .scrollbar-subtle:focus-within::-webkit-scrollbar-thumb {
+        background-color: color-mix(
+            in oklch,
+            var(--muted-foreground) 35%,
+            transparent
+        );
+    }
+}
+
+@layer components {
+    /**
+     * The assistant trigger.
+     *
+     * The one control in the chrome that does something qualitatively different
+     * from every other button, so it is the one allowed to draw the eye. Built
+     * from `--primary` (hue 272, already the brand violet) via `color-mix`
+     * rather than a hard-coded purple, so it tracks the theme in both modes.
+     *
+     * The sweep is a masked pseudo-element rather than an animated background
+     * position, which keeps it off the paint path of the label itself. Both the
+     * glow and the sweep are animations, so the global `prefers-reduced-motion`
+     * rule above stops them; the static tint and ring survive, and the button
+     * still reads as the accent control when they do.
+     */
+    .btn-ai {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        border-color: color-mix(in oklch, var(--primary) 45%, transparent);
+        background: linear-gradient(
+            135deg,
+            color-mix(in oklch, var(--primary) 16%, transparent),
+            color-mix(in oklch, var(--primary) 7%, transparent)
+        );
+        color: color-mix(in oklch, var(--primary) 78%, var(--foreground));
+        animation: ai-glow 3.2s ease-in-out infinite;
+    }
+
+    .btn-ai:hover:not(:disabled) {
+        border-color: color-mix(in oklch, var(--primary) 70%, transparent);
+        background: linear-gradient(
+            135deg,
+            color-mix(in oklch, var(--primary) 26%, transparent),
+            color-mix(in oklch, var(--primary) 12%, transparent)
+        );
+    }
+
+    /* The travelling highlight. `transform` only, so it never triggers layout. */
+    .btn-ai::after {
+        content: "";
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: -60%;
+        width: 40%;
+        z-index: -1;
+        background: linear-gradient(
+            100deg,
+            transparent,
+            color-mix(in oklch, var(--primary) 34%, transparent),
+            transparent
+        );
+        animation: ai-shimmer 3.2s ease-in-out infinite;
+    }
+
+    .btn-ai:disabled {
+        animation: none;
+    }
+
+    .btn-ai:disabled::after {
+        animation: none;
+        opacity: 0;
+    }
+
+    @keyframes ai-glow {
+        0%,
+        100% {
+            box-shadow: 0 0 0 0
+                color-mix(in oklch, var(--primary) 24%, transparent);
+        }
+        50% {
+            box-shadow: 0 0 14px 1px
+                color-mix(in oklch, var(--primary) 34%, transparent);
+        }
+    }
+
+    @keyframes ai-shimmer {
+        0% {
+            transform: translateX(0);
+        }
+        /* Crosses, then rests: a continuous sweep in the chrome is a
+           distraction on a screen people keep open all day. */
+        45%,
+        100% {
+            transform: translateX(420%);
+        }
+    }
+}

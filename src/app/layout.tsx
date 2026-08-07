@@ -1,0 +1,57 @@
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+
+import { siteConfig } from "@/config/site";
+import { cn } from "@/lib/utils";
+import { Providers } from "@/providers";
+
+import "./globals.css";
+
+const geistSans = Geist({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: {
+    default: siteConfig.name,
+    template: `%s · ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  // Internal tool: keep it out of search results entirely.
+  robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "white" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
+  ],
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    // `suppressHydrationWarning` is required by next-themes: it writes the
+    // theme class onto <html> before React hydrates.
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={cn(
+          "min-h-svh font-sans antialiased",
+          geistSans.variable,
+          geistMono.variable,
+        )}
+      >
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
