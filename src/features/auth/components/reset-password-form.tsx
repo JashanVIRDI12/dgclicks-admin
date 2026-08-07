@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { PasswordInput } from "@/components/common/password-input";
 import { SubmitButton } from "@/components/common/submit-button";
 import {
   Field,
@@ -12,7 +13,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { resetPasswordAction } from "@/features/auth/actions/auth.actions";
 import {
   resetPasswordSchema,
@@ -47,9 +47,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <FieldGroup>
         <Field data-invalid={Boolean(form.formState.errors.newPassword)}>
           <FieldLabel htmlFor="new-password">New password</FieldLabel>
-          <Input
+          <PasswordInput
             id="new-password"
-            type="password"
             autoComplete="new-password"
             autoFocus
             aria-invalid={Boolean(form.formState.errors.newPassword)}
@@ -60,9 +59,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
         <Field data-invalid={Boolean(form.formState.errors.confirmPassword)}>
           <FieldLabel htmlFor="confirm-password">Confirm password</FieldLabel>
-          <Input
+          <PasswordInput
             id="confirm-password"
-            type="password"
             autoComplete="new-password"
             aria-invalid={Boolean(form.formState.errors.confirmPassword)}
             {...form.register("confirmPassword")}

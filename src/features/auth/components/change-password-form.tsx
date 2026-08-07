@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { PasswordInput } from "@/components/common/password-input";
 import { SubmitButton } from "@/components/common/submit-button";
 import {
   Field,
@@ -12,7 +13,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { changePasswordAction } from "@/features/auth/actions/auth.actions";
 import {
   changePasswordSchema,
@@ -56,9 +56,8 @@ export function ChangePasswordForm() {
       <FieldGroup>
         <Field data-invalid={Boolean(form.formState.errors.currentPassword)}>
           <FieldLabel htmlFor="current-password">Current password</FieldLabel>
-          <Input
+          <PasswordInput
             id="current-password"
-            type="password"
             autoComplete="current-password"
             autoFocus
             aria-invalid={Boolean(form.formState.errors.currentPassword)}
@@ -69,9 +68,8 @@ export function ChangePasswordForm() {
 
         <Field data-invalid={Boolean(form.formState.errors.newPassword)}>
           <FieldLabel htmlFor="security-new-password">New password</FieldLabel>
-          <Input
+          <PasswordInput
             id="security-new-password"
-            type="password"
             autoComplete="new-password"
             aria-invalid={Boolean(form.formState.errors.newPassword)}
             {...form.register("newPassword")}
@@ -84,9 +82,8 @@ export function ChangePasswordForm() {
           <FieldLabel htmlFor="security-confirm-password">
             Confirm new password
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="security-confirm-password"
-            type="password"
             autoComplete="new-password"
             aria-invalid={Boolean(form.formState.errors.confirmPassword)}
             {...form.register("confirmPassword")}
