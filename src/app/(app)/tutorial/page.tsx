@@ -5,8 +5,10 @@ import {
   KeyboardIcon,
   LayersIcon,
   PaperclipIcon,
+  PlusIcon,
   RepeatIcon,
   SearchIcon,
+  ShieldCheckIcon,
   TimerIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -31,7 +33,9 @@ export const metadata: Metadata = {
 
 const CONTENTS = [
   { id: "structure", label: "How it is organised" },
+  { id: "access", label: "Who can do what" },
   { id: "board", label: "The board" },
+  { id: "new-task", label: "Adding a task" },
   { id: "task", label: "Opening a task" },
   { id: "checklists", label: "Checklists and subtasks" },
   { id: "repeat", label: "Repeating work" },
@@ -87,6 +91,59 @@ export default async function TutorialPage() {
         </Section>
 
         <Section
+          id="access"
+          icon={ShieldCheckIcon}
+          title="Who can do what"
+          lede="Three rings: your account, the workspaces you manage, and each board."
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Card>
+              <p className="text-sm font-medium">Member</p>
+              <p className="mt-1 text-sm text-pretty text-muted-foreground">
+                The default. Full run of every board they can see — cards,
+                comments, files, time.
+              </p>
+            </Card>
+
+            <Card>
+              <p className="text-sm font-medium">Workspace manager</p>
+              <p className="mt-1 text-sm text-pretty text-muted-foreground">
+                Also renames the workspace, decides who is in it, hands out
+                invite links, and creates boards.
+              </p>
+            </Card>
+
+            <Card>
+              <p className="text-sm font-medium">Administrator</p>
+              <p className="mt-1 text-sm text-pretty text-muted-foreground">
+                Manages every workspace they belong to, sets board permissions,
+                and alone can permanently delete a task, board or workspace.
+              </p>
+            </Card>
+          </div>
+
+          <p className="text-sm text-pretty text-muted-foreground">
+            Managers are chosen in{" "}
+            <Link href="/settings" className="underline underline-offset-2">
+              Settings
+            </Link>{" "}
+            → Permissions, and members who are one carry a Manager tag in the
+            list. Whoever created a workspace always manages it, so it can never
+            be left with nobody able to run it — and so can any administrator,
+            so it cannot lock them out.
+          </p>
+
+          <Note title="A board can be narrower than its workspace">
+            Boards are open to everyone in the workspace by default. An
+            administrator can restrict editing to named people from the board
+            toolbar&apos;s Permissions button, or make a board private. A
+            private board is hidden from everyone else everywhere in the app
+            rather than greyed out, so you will never be shown one you cannot
+            open.
+          </Note>
+        </Section>
+
+        <Section
           id="board"
           icon={KanbanIcon}
           title="The board"
@@ -94,10 +151,11 @@ export default async function TutorialPage() {
         >
           <Steps
             items={[
-              "Add a card with the button at the foot of any column. Type a title and press Enter — it stays focused so you can add several in a row.",
+              "Add a card with the + at the foot of any column. A panel opens on the right, and a title is the only thing it asks for.",
               "Drag a card to another column to move it. The position is saved as soon as you let go.",
               "Drag a column by the handle to its left to reorder the board.",
               "Use the Filter button to narrow by priority, assignee or label. Filtering is instant — it never reloads the board.",
+              "The gear beside the board's name holds the board itself: its name, icon and colour, and archiving it.",
             ]}
           />
 
@@ -114,6 +172,37 @@ export default async function TutorialPage() {
             removed along with a column, because that is a lot of work to lose
             to one click.
           </p>
+        </Section>
+
+        <Section
+          id="new-task"
+          icon={PlusIcon}
+          title="Adding a task"
+          lede="One required field. The rest can wait — or be done now."
+        >
+          <p className="text-sm text-pretty text-muted-foreground">
+            A title is all a task needs. Description, priority, assignee, start
+            and due dates, an estimate, labels, a repeat and subtasks are all on
+            the same panel, and all optional — fill in what you know and leave
+            the rest.
+          </p>
+
+          <Card>
+            <p className="text-sm font-medium">Subtasks, before the task exists</p>
+            <p className="mt-1 text-sm text-pretty text-muted-foreground">
+              Type a subtask, press <Key>Enter</Key>, type the next one. They
+              are created along with the task, so a job whose shape you already
+              know arrives whole instead of being assembled afterwards. Up to 20
+              here; add as many more as you like later from the task itself.
+            </p>
+          </Card>
+
+          <Note title="Creating leaves you on the board">
+            The new card drops into its column and the panel closes. It does not
+            then open the task — the panel you just filled in asked for
+            everything the task panel would show, so there is nothing waiting
+            behind it.
+          </Note>
         </Section>
 
         <Section
@@ -165,7 +254,9 @@ export default async function TutorialPage() {
           <p className="text-sm text-pretty text-muted-foreground">
             Subtasks never appear as cards on the board. They live in their
             parent&apos;s panel, which is what keeps a board readable when a
-            single job has a dozen moving parts.
+            single job has a dozen moving parts. They can be listed as the task
+            is created as well as added to it later, and they stop at one level
+            — a subtask cannot have subtasks of its own.
           </p>
         </Section>
 
@@ -271,8 +362,8 @@ export default async function TutorialPage() {
           <p className="text-sm text-pretty text-muted-foreground">
             Press <Key>⌘</Key> <Key>K</Key> — or <Key>Ctrl</Key> <Key>K</Key> on
             Windows — anywhere in the app. It searches task titles and boards,
-            jumps to any page, and can create a task or a board without leaving
-            the screen you are on.
+            jumps to any page, and creates a task — or a board, if you manage
+            the workspace — without leaving the screen you are on.
           </p>
 
           <Note title="It only ever finds your own work">
@@ -327,12 +418,12 @@ export default async function TutorialPage() {
                 description="Add the task, checklist item or subtask you are typing"
               />
               <ShortcutRow
-                keys={["Shift", "Enter"]}
-                description="New line instead, when adding a card"
-              />
-              <ShortcutRow
                 keys={["⌘/Ctrl", "Enter"]}
                 description="Post a comment"
+              />
+              <ShortcutRow
+                keys={["Shift", "Enter"]}
+                description="New line instead, when writing to the assistant"
               />
               <ShortcutRow keys={["Esc"]} description="Discard what you typed" />
             </div>
