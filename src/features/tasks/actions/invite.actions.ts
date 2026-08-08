@@ -16,14 +16,14 @@ import type { WorkspaceInvite } from "@/features/tasks/types";
 import { createAction } from "@/lib/actions/create-action";
 
 /**
- * Only administrators hand out access.
+ * Only a workspace's managers hand out access to it.
  *
- * `auth: ["admin"]` is the coarse check; `createWorkspaceInvite` still proves
- * membership of the specific workspace, because an admin of this app is not
- * automatically a member of every workspace in it.
+ * The session check is only that someone is signed in; `createWorkspaceInvite`
+ * proves they manage the specific workspace, because an administrator of this
+ * app is not automatically a member of every workspace in it.
  */
 export const createInviteAction = createAction({
-  auth: ["admin"],
+  auth: true,
   input: createInviteSchema,
   handler: async ({ input, session }): Promise<WorkspaceInvite> => {
     const invite = await createWorkspaceInvite(
@@ -39,7 +39,7 @@ export const createInviteAction = createAction({
 });
 
 export const revokeInviteAction = createAction({
-  auth: ["admin"],
+  auth: true,
   input: revokeInviteSchema,
   handler: async ({ input, session }) => {
     await revokeWorkspaceInvite(input.id, session.user.id);

@@ -52,11 +52,14 @@ export function CommandPalette({
   activeWorkspaceId,
   currentUserId,
   isAdmin,
+  canManageWorkspace,
 }: {
   boards: Board[];
   activeWorkspaceId: string | null;
   currentUserId: string;
   isAdmin: boolean;
+  /** Creating a board is a workspace-management right, not a board one. */
+  canManageWorkspace: boolean;
 }) {
   const router = useRouter();
   const isOpen = useUiStore((state) => state.isCommandPaletteOpen);
@@ -231,7 +234,7 @@ export function CommandPalette({
               New task
             </CommandItem>
 
-            {isAdmin ? (
+            {canManageWorkspace ? (
               <CommandItem
                 value="create-board"
                 disabled={activeWorkspaceId === null}
@@ -255,7 +258,7 @@ export function CommandPalette({
         boards={editableBoards}
       />
 
-      {activeWorkspaceId && isAdmin ? (
+      {activeWorkspaceId && canManageWorkspace ? (
         <BoardFormDialog
           workspaceId={activeWorkspaceId}
           open={isCreateBoardOpen}

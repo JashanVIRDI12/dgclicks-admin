@@ -31,3 +31,17 @@ export async function listTeamMembers(): Promise<TeamMember[]> {
     image: doc.image ?? null,
   }));
 }
+
+/**
+ * Whether an account holds the global administrator role.
+ *
+ * Read from the database rather than from a session, because the resource
+ * checks in the data layer run deep below the action that has the session in
+ * hand — and because a role revoked five minutes ago should take effect on the
+ * next request rather than the next sign-in.
+ */
+export async function isAdminUser(userId: string): Promise<boolean> {
+  await connectToDatabase();
+
+  return Boolean(await UserModel.exists({ _id: userId, role: "admin" }));
+}

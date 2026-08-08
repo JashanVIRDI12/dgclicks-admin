@@ -12,6 +12,7 @@ import {
   createWorkspaceSchema,
   deleteWorkspaceSchema,
   updateWorkspaceSchema,
+  workspaceManagersSchema,
   workspaceMembersSchema,
 } from "@/features/tasks/schemas/workspace.schema";
 import {
@@ -19,11 +20,13 @@ import {
   ACTIVE_WORKSPACE_COOKIE_OPTIONS,
 } from "@/features/tasks/server/active-workspace";
 import {
+  assertWorkspaceManager,
   assertWorkspaceMember,
   createWorkspace,
   deleteWorkspace,
   getWorkspaceById,
   listWorkspacesForUser,
+  setWorkspaceManagers,
   setWorkspaceMembers,
   updateWorkspace,
 } from "@/features/tasks/server/workspace.service";
@@ -73,11 +76,11 @@ export const createWorkspaceAction = createAction({
 });
 
 export const updateWorkspaceAction = createAction({
-  auth: ["admin"],
+  auth: true,
   input: updateWorkspaceSchema,
   handler: async ({ input, session }): Promise<Workspace> => {
     const { id, ...fields } = input;
-    await assertWorkspaceMember(id, session.user.id);
+    await assertWorkspaceManager(id, session.user.id);
 
     const before = await getWorkspaceById(id);
     const workspace = await updateWorkspace(id, fields);
@@ -97,10 +100,10 @@ export const updateWorkspaceAction = createAction({
 });
 
 export const setWorkspaceMembersAction = createAction({
-  auth: ["admin"],
+  auth: true,
   input: workspaceMembersSchema,
   handler: async ({ input, session }): Promise<Workspace> => {
-    await assertWorkspaceMember(input.id, session.user.id);
+    await assertWorkspaceManager(input.id, session.user.id);
 
     const workspace = await setWorkspaceMembers(
       input.id,
@@ -128,6 +131,53 @@ export const setWorkspaceMembersAction = createAction({
   },
 });
 
+/**
+ * Who else may administer this workspace.
+ *
+ * A manager can appoint another manager — the alternative is a workspace whose
+ * people can only be changed by someone outside it, which is the situation this
+ * permission exists to end. Deleting stays out of their reach; see below.
+ */
+export const setWorkspaceManagersAction = createAction({
+  auth: true,
+  input: workspaceManagersSchema,
+  handler: async ({ input, session }): Promise<Workspace> => {
+    await assertWorkspaceManager(input.id, session.user.id);
+
+    const before = await getWorkspaceById(input.id);
+    const workspace = await setWorkspaceManagers(
+      input.id,
+      input.managerIds,
+      session.user.id,
+    );
+
+    await recordActivity({
+      actorId: session.user.id,
+      action: "updated",
+      entityType: "workspace",
+      entityId: workspace.id,
+      entityLabel: workspace.name,
+      changes: [
+        {
+          field: "managers",
+          from: `${before.managerIds.length}`,
+          to: `${workspace.managerIds.length}`,
+        },
+      ],
+    });
+
+    revalidateWorkspaceScope();
+    return workspace;
+  },
+});
+
+/**
+ * Deleting is the one workspace action a manager does not get.
+ *
+ * It destroys every board, task, comment and file inside the workspace, and
+ * unlike every other setting here there is nothing to undo it with — so it
+ * stays with global administrators.
+ */
 export const deleteWorkspaceAction = createAction({
   auth: ["admin"],
   input: deleteWorkspaceSchema,

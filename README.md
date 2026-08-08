@@ -221,13 +221,17 @@ so it cannot be set from a sign-up payload. **The first account created becomes
 the admin** — without that there is no route to one, since nothing can promote a
 user from outside. Everyone after is a member.
 
-Admins manage workspace membership, invites, board creation, board ordering,
-archiving, deletion and board permission settings. Board editors manage board
-details, columns, labels and task work. Permanent task deletion and removing
-another person's comment or attachment remain admin-only.
+The global role is the outermost ring. Inside it sit two narrower grants that do
+not need it: **workspace managers** run one workspace (below), and **board
+editors** manage one board's details, columns, labels and task work. Board
+ordering, archiving, deletion, board permission settings, permanent task
+deletion and removing another person's comment or attachment remain admin-only.
 
 Role checks live in the actions (`auth: ["admin"]`), not just the UI. Hiding a
-button is a courtesy; the action is the boundary.
+button is a courtesy; the action is the boundary. Where a right is per-resource
+rather than global, the action pairs `auth: true` with a resource check —
+`assertWorkspaceManager`, `assertBoardEditAccess` — because the session proves
+who is calling and only the record proves what they may touch.
 
 There is deliberately no screen for changing a role. Promote someone by editing
 the `user` collection directly:
@@ -239,10 +243,42 @@ db.user.updateOne({ email: "them@example.com" }, { $set: { role: "admin" } })
 Sessions cache the role in a signed cookie for five minutes, so a change takes
 up to that long to take effect. Signing out and back in is immediate.
 
+### Workspace access
+
+Membership lets you work *inside* a workspace. Changing the workspace itself is
+a separate, smaller grant: its **managers**, set from **Settings → Permissions**.
+
+| | Member | Manager | Admin |
+| --- | --- | --- | --- |
+| See and work on the boards they can reach | ✓ | ✓ | ✓ |
+| Rename the workspace | | ✓ | ✓ |
+| Add and remove members | | ✓ | ✓ |
+| Appoint other managers | | ✓ | ✓ |
+| Create and revoke invite links | | ✓ | ✓ |
+| Create boards | | ✓ | ✓ |
+| Delete the workspace | | | ✓ |
+
+Three people are managers whatever the stored list says: anyone listed on the
+workspace, **the creator** — so a workspace can never be left with nobody able
+to run it, and so the field can default to empty on workspaces that predate it
+without a backfill — and **any global admin**, so a workspace cannot lock them
+out. That rule is `canManageWorkspace` on the client and `assertWorkspaceManager`
+on the server; the client copy exists only to decide what to render.
+
+Deleting is the one thing a manager does not get. It destroys every board, task,
+comment and file in the workspace and there is nothing to undo it with.
+
+Two smaller rules follow from the same place. A manager must already be a
+member — administering a workspace you cannot open is a setting with no effect —
+and removing someone from the workspace drops their management with them, so a
+manager id left behind cannot silently hand the role back the day they are
+re-added. Live invite links are shown only to managers, because the link
+contains the token and the token is the credential.
+
 ### Board access
 
 Workspace membership is the floor. Each board then sets one of three modes,
-edited from the board's `⋯` menu → **Permissions** (admins only):
+edited from the board toolbar → **Permissions** (admins only):
 
 | Mode | Can see it | Can edit it |
 | --- | --- | --- |
@@ -284,7 +320,7 @@ silently.
 
 ### Invites
 
-Admins add people from **Settings → Invite people**: choose an expiry (1, 7 or
+Managers add people from **Settings → Invite people**: choose an expiry (1, 7 or
 30 days, or never), create a link, and send it however you like. Active links
 are listed with their expiry and use count, each with copy and revoke. Revoking
 is immediate and permanent — issue a new link rather than restoring one.
@@ -368,6 +404,19 @@ Checklists and subtasks are both there because they are different things: a
 checklist item is a string and a tick, embedded on the task; a subtask is a real
 task with a parent, carrying its own assignee and due date. Board queries filter
 `parent: null`, so a subtask never appears as a card.
+
+Subtasks can be listed while creating the parent, not only afterwards from the
+drawer. The new-task sheet collects titles only — there is no parent to hang a
+real task off until the create succeeds — and they are written with the parent
+in one `insertMany`, capped at `SUBTASK_CREATE_LIMIT`, sharing the parent's
+column. Adding more later from the drawer is uncapped; the limit bounds one
+request, not one task. Nesting stops there: a subtask cannot carry subtasks of
+its own, because the drawer renders children as a flat list with no way in to a
+third level.
+
+Creating a task closes the sheet and leaves you on the board. It does not open
+the new card's drawer — the sheet already asked for everything the drawer would
+show, so following one panel with another is just a second thing to close.
 
 `commentCount` and `attachmentCount` are denormalised and written only by the
 services that create and delete those records — counting per card would be an

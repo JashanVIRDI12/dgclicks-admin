@@ -9,7 +9,7 @@ import {
   WorkspaceModel,
   type WorkspaceInviteDoc,
 } from "@/features/tasks/server/models";
-import { assertWorkspaceMember } from "@/features/tasks/server/workspace.service";
+import { assertWorkspaceManager } from "@/features/tasks/server/workspace.service";
 import type { WorkspaceInvite } from "@/features/tasks/types";
 import { connectToDatabase } from "@/lib/db/connect";
 import { env } from "@/lib/env";
@@ -46,12 +46,17 @@ export function inviteUrl(token: string): string {
   return new URL(`/invite/${token}`, env.BETTER_AUTH_URL).toString();
 }
 
+/**
+ * Managers only, not every member: a live invite URL contains the token, and
+ * the token is the credential. Listing them to anyone who can read the
+ * workspace would hand out the ability to invite without the right to.
+ */
 export async function listWorkspaceInvites(
   workspaceId: string,
   actorId: string,
 ): Promise<WorkspaceInvite[]> {
   await connectToDatabase();
-  await assertWorkspaceMember(workspaceId, actorId);
+  await assertWorkspaceManager(workspaceId, actorId);
 
   const invites = await WorkspaceInviteModel.find({
     workspace: workspaceId,
@@ -69,7 +74,7 @@ export async function createWorkspaceInvite(
   expiresInDays: number | null,
 ): Promise<WorkspaceInvite> {
   await connectToDatabase();
-  await assertWorkspaceMember(workspaceId, actorId);
+  await assertWorkspaceManager(workspaceId, actorId);
 
   const created = await WorkspaceInviteModel.create({
     workspace: new Types.ObjectId(workspaceId),
@@ -96,7 +101,7 @@ export async function revokeWorkspaceInvite(
     throw new NotFoundError("That invite link no longer exists.");
   }
 
-  await assertWorkspaceMember(invite.workspace.toString(), actorId);
+  await assertWorkspaceManager(invite.workspace.toString(), actorId);
 
   await WorkspaceInviteModel.updateOne(
     { _id: inviteId, revokedAt: null },

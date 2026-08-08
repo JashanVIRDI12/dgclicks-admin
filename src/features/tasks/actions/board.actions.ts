@@ -39,7 +39,7 @@ import {
   updateLabel,
   updateList,
 } from "@/features/tasks/server/board.service";
-import { assertWorkspaceMember } from "@/features/tasks/server/workspace.service";
+import { assertWorkspaceManager } from "@/features/tasks/server/workspace.service";
 import { LabelModel, ListModel } from "@/features/tasks/server/models";
 import type { Board, Label, List } from "@/features/tasks/types";
 import { createAction } from "@/lib/actions/create-action";
@@ -94,11 +94,12 @@ async function boardForLabel(labelId: string, userId: string): Promise<string> {
   return boardId;
 }
 
+/** What boards exist in a workspace is a workspace-management decision. */
 export const createBoardAction = createAction({
-  auth: ["admin"],
+  auth: true,
   input: createBoardSchema,
   handler: async ({ input, session }): Promise<Board> => {
-    await assertWorkspaceMember(input.workspaceId, session.user.id);
+    await assertWorkspaceManager(input.workspaceId, session.user.id);
 
     const board = await createBoard(input, session.user.id);
 

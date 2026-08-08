@@ -5,6 +5,7 @@ import { Types } from "mongoose";
 import { ActivityModel } from "@/features/activity/server/activity.model";
 import { USER_SUMMARY_SELECT } from "@/features/auth/server/serialize";
 import { UserModel } from "@/features/auth/server/user.model";
+import { isAdminUser } from "@/features/auth/server/users.service";
 import { deleteWorkspaceBoards } from "@/features/tasks/server/deletion.service";
 import {
   WorkspaceModel,
@@ -116,6 +117,51 @@ export async function assertWorkspaceMember(
   }
 }
 
+function isWorkspaceManager(workspace: WorkspaceDoc, userId: string): boolean {
+  return (
+    workspace.createdBy.toString() === userId ||
+    (workspace.managers ?? []).some(
+      (managerId) => managerId.toString() === userId,
+    )
+  );
+}
+
+/**
+ * Management access for a workspace.
+ *
+ * `assertWorkspaceMember` proves someone may work *inside* a workspace; this
+ * proves they may change the workspace itself. Keeping the two apart is the
+ * whole point of the permission: every member can move cards, but renaming the
+ * workspace or deciding who is in it is a smaller circle.
+ *
+ * Returns the document so callers do not read it twice.
+ */
+export async function assertWorkspaceManager(
+  workspaceId: string,
+  userId: string,
+): Promise<WorkspaceDoc> {
+  await connectToDatabase();
+
+  const workspace = await WorkspaceModel.findById(workspaceId).lean<WorkspaceDoc>();
+  const isMember = (workspace?.members ?? []).some(
+    (memberId) => memberId.toString() === userId,
+  );
+
+  if (!workspace || !isMember) {
+    throw new ForbiddenError("You do not have access to that workspace.");
+  }
+
+  // The role check is last because it is the only one that costs a query, and
+  // the creator and listed managers are already in hand.
+  if (isWorkspaceManager(workspace, userId) || (await isAdminUser(userId))) {
+    return workspace;
+  }
+
+  throw new ForbiddenError(
+    "Only a manager of this workspace can change that.",
+  );
+}
+
 export async function createWorkspace(
   input: { name: string },
   createdById: string,
@@ -169,12 +215,80 @@ export async function setWorkspaceMembers(
     });
   }
 
+  const existing = await WorkspaceModel.findById(id)
+    .select("managers")
+    .lean<{ managers?: Types.ObjectId[] }>();
+
+  if (!existing) {
+    throw new NotFoundError("That workspace no longer exists.");
+  }
+
+  const remaining = new Set(uniqueIds);
+
   const updated = await WorkspaceModel.findByIdAndUpdate(
     id,
-    // The actor stays a member whatever the form said. Removing yourself from
-    // the workspace you are editing locks you out of your own boards, and the
-    // recovery path is a database edit.
-    { members: uniqueIds.map((memberId) => new Types.ObjectId(memberId)) },
+    {
+      // The actor stays a member whatever the form said. Removing yourself from
+      // the workspace you are editing locks you out of your own boards, and the
+      // recovery path is a database edit.
+      members: uniqueIds.map((memberId) => new Types.ObjectId(memberId)),
+      // Removing someone drops their management too. A manager id left behind
+      // for a non-member is a promotion waiting to be handed back silently the
+      // day anyone re-adds them.
+      managers: (existing.managers ?? []).filter((managerId) =>
+        remaining.has(managerId.toString()),
+      ),
+    },
+    { new: true, runValidators: true },
+  )
+    .select("_id")
+    .lean<{ _id: Types.ObjectId }>();
+
+  if (!updated) {
+    throw new NotFoundError("That workspace no longer exists.");
+  }
+
+  return getWorkspaceById(id);
+}
+
+/**
+ * Replaces the manager list.
+ *
+ * A manager has to be a member first — administration of a workspace someone
+ * cannot open is a setting with no effect — and the actor keeps the role
+ * whatever the form said, for the same reason `setWorkspaceMembers` keeps them
+ * a member: demoting yourself out of the screen you are standing on leaves a
+ * database edit as the way back.
+ */
+export async function setWorkspaceManagers(
+  id: string,
+  managerIds: string[],
+  actorId: string,
+): Promise<Workspace> {
+  await connectToDatabase();
+
+  const workspace = await WorkspaceModel.findById(id)
+    .select("members")
+    .lean<{ members: Types.ObjectId[] }>();
+
+  if (!workspace) {
+    throw new NotFoundError("That workspace no longer exists.");
+  }
+
+  const memberIds = new Set(
+    (workspace.members ?? []).map((memberId) => memberId.toString()),
+  );
+  const uniqueIds = [...new Set([...managerIds, actorId])];
+
+  if (uniqueIds.some((managerId) => !memberIds.has(managerId))) {
+    throw new ValidationError("Managers have to be members of the workspace.", {
+      managerIds: ["Add them to the workspace before making them a manager."],
+    });
+  }
+
+  const updated = await WorkspaceModel.findByIdAndUpdate(
+    id,
+    { managers: uniqueIds.map((managerId) => new Types.ObjectId(managerId)) },
     { new: true, runValidators: true },
   )
     .select("_id")

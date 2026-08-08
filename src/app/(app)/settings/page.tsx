@@ -11,6 +11,7 @@ import { WorkspaceInvites } from "@/features/tasks/components/workspace-invites"
 import { WorkspaceMembers } from "@/features/tasks/components/workspace-members";
 import { WorkspaceDangerZone } from "@/features/tasks/components/workspace-danger-zone";
 import { WorkspaceOnboarding } from "@/features/tasks/components/workspace-onboarding";
+import { canManageWorkspace } from "@/features/tasks/permissions";
 import { getActiveWorkspaceContext } from "@/features/tasks/server/active-workspace";
 import { listWorkspaceInvites } from "@/features/tasks/server/invite.service";
 
@@ -31,9 +32,13 @@ export default async function SettingsPage() {
   }
 
   const isAdmin = getSessionRole(session) === "admin";
-  const teamMembers = isAdmin ? await listTeamMembers() : active.members;
-  // Only administrators can create or revoke links, so only they are shown any.
-  const invites = isAdmin
+  const canManage = canManageWorkspace(active, session.user.id, isAdmin);
+  // Only a manager can add someone, so only a manager is shown the directory of
+  // people to add. Everyone else sees the workspace as it stands.
+  const teamMembers = canManage ? await listTeamMembers() : active.members;
+  // A live link carries its own token, so it is shown only to the people who
+  // could have created it.
+  const invites = canManage
     ? await listWorkspaceInvites(active.id, session.user.id)
     : [];
 
@@ -49,10 +54,10 @@ export default async function SettingsPage() {
           workspace={active}
           teamMembers={teamMembers}
           currentUserId={session.user.id}
-          canManage={isAdmin}
+          canManage={canManage}
         />
 
-        {isAdmin ? (
+        {canManage ? (
           <WorkspaceInvites workspaceId={active.id} invites={invites} />
         ) : null}
 

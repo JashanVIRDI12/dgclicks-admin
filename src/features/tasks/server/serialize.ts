@@ -43,6 +43,8 @@ type WorkspaceSource = {
   name: string;
   slug: string;
   members?: unknown[];
+  managers?: unknown[];
+  createdBy: unknown;
   createdAt: Date;
 };
 
@@ -56,6 +58,8 @@ export function toWorkspace(doc: WorkspaceSource): Workspace {
         toUserSummary(member as Parameters<typeof toUserSummary>[0]),
       )
       .filter((member): member is UserSummary => member !== null),
+    managerIds: (doc.managers ?? []).map(toIdString),
+    createdById: toIdString(doc.createdBy),
     createdAt: doc.createdAt.toISOString(),
   };
 }

@@ -26,6 +26,7 @@ export function AppShell({
   boards,
   currentUserId,
   isAdmin,
+  canManageWorkspace,
   assistantEnabled,
   children,
 }: {
@@ -35,6 +36,8 @@ export function AppShell({
   boards: Board[];
   currentUserId: string;
   isAdmin: boolean;
+  /** Whether the reader manages the active workspace. Gates "New board". */
+  canManageWorkspace: boolean;
   assistantEnabled: boolean;
   children: ReactNode;
 }) {
@@ -91,6 +94,7 @@ export function AppShell({
         activeWorkspaceId={activeWorkspaceId}
         currentUserId={currentUserId}
         isAdmin={isAdmin}
+        canManageWorkspace={canManageWorkspace}
       />
       <AssistantPanel
         enabled={assistantEnabled}

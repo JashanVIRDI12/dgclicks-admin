@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { getSessionRole, requireSession } from "@/features/auth/server/session";
+import { canManageWorkspace } from "@/features/tasks/permissions";
 import { getActiveWorkspaceContext } from "@/features/tasks/server/active-workspace";
 import { listBoards } from "@/features/tasks/server/board.service";
 import { env } from "@/lib/env";
@@ -24,6 +25,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     session.user.id,
   );
   const boards = active ? await listBoards(active.id, session.user.id) : [];
+  const isAdmin = getSessionRole(session) === "admin";
 
   return (
     <AppShell
@@ -36,7 +38,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       activeWorkspaceId={active?.id ?? null}
       boards={boards}
       currentUserId={session.user.id}
-      isAdmin={getSessionRole(session) === "admin"}
+      isAdmin={isAdmin}
+      canManageWorkspace={
+        active ? canManageWorkspace(active, session.user.id, isAdmin) : false
+      }
       assistantEnabled={env.isAssistantEnabled}
     >
       {children}

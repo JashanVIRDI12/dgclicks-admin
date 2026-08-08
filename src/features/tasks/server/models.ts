@@ -34,6 +34,15 @@ const workspaceSchema = new Schema(
     },
     slug: { type: String, required: true, trim: true, lowercase: true },
     members: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
+    /**
+     * Members who may administer the workspace as well as work in it.
+     *
+     * The creator is not listed — they manage it by having made it — and
+     * neither are global administrators, who manage every workspace they belong
+     * to by role. Both are folded in by `canManageWorkspace`, which is what lets
+     * this field default to empty on workspaces that predate it.
+     */
+    managers: [{ type: Schema.Types.ObjectId, ref: "User" }],
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { collection: "workspace", timestamps: true },

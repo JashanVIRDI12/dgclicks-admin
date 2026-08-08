@@ -76,6 +76,13 @@ no caller.
 - **Check the resource, not just the session.** `createAction` proves who is
   calling; `assertBoardAccess` / `assertTaskAccess` prove they may touch that
   record. Every board, task, comment and attachment operation needs both.
+- **Managing a workspace is not `auth: ["admin"]`.** Renaming a workspace,
+  changing its people, handing out invite links and creating boards go through
+  `assertWorkspaceManager`, which folds in the creator and global admins on top
+  of the stored `managers`. A global role check in place of it locks out the
+  managers the permission exists to create; `assertWorkspaceMember` in place of
+  it lets any member re-permission the workspace. Deleting a workspace is the
+  one exception and stays `auth: ["admin"]`.
 - **Never list boards without a viewer.** `listBoards(workspaceId, viewerId)`
   applies the `private` visibility filter inside the query, and the sidebar,
   dashboard, my tasks, calendar, reports, activity and search all derive their

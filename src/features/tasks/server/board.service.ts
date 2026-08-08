@@ -2,7 +2,7 @@ import "server-only";
 
 import { Types } from "mongoose";
 
-import { UserModel } from "@/features/auth/server/user.model";
+import { isAdminUser } from "@/features/auth/server/users.service";
 import {
   DEFAULT_LISTS,
   type BoardAccessMode,
@@ -65,11 +65,6 @@ async function nextBoardPosition(workspaceId: string): Promise<number> {
  * every mutation needs both the access check and the board's workspace for the
  * `revalidatePath` that follows.
  */
-/** Administrators keep access to every board under every access mode. */
-async function isAdminUser(userId: string): Promise<boolean> {
-  return Boolean(await UserModel.exists({ _id: userId, role: "admin" }));
-}
-
 function isBoardEditor(board: BoardDoc, userId: string): boolean {
   return (board.editors ?? []).some(
     (editorId) => editorId.toString() === userId,

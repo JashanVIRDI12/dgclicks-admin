@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, PencilIcon } from "lucide-react";
+import { CheckIcon, PencilIcon, ShieldCheckIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -9,16 +9,18 @@ import { Button } from "@/components/ui/button";
 import type { UserSummary } from "@/features/auth/types";
 import { setWorkspaceMembersAction } from "@/features/tasks/actions/workspace.actions";
 import { WorkspaceFormDialog } from "@/features/tasks/components/workspace-form-dialog";
+import { WorkspacePermissionsDialog } from "@/features/tasks/components/workspace-permissions-dialog";
 import { AssigneeAvatar } from "@/features/tasks/components/task-meta";
 import type { Workspace } from "@/features/tasks/types";
 import { cn } from "@/lib/utils";
 
 /**
- * Who is in the workspace.
+ * Who is in the workspace, and which of them run it.
  *
- * Membership is what board access is derived from — there is no per-board
- * permission — so this list is the whole access-control surface, and it is
- * deliberately visible rather than buried behind an admin screen.
+ * Membership is what board access is derived from, so this list is the base of
+ * the access-control surface and is deliberately visible rather than buried
+ * behind an admin screen. Who may *change* it is the narrower question the
+ * permissions dialog answers.
  */
 export function WorkspaceMembers({
   workspace,
@@ -34,8 +36,10 @@ export function WorkspaceMembers({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isRenameOpen, setRenameOpen] = useState(false);
+  const [isPermissionsOpen, setPermissionsOpen] = useState(false);
 
   const memberIds = new Set(workspace.members.map((member) => member.id));
+  const managerIds = new Set([workspace.createdById, ...workspace.managerIds]);
 
   function toggle(userId: string) {
     if (userId === currentUserId) {
@@ -73,15 +77,26 @@ export function WorkspaceMembers({
           </span>
 
           {canManage ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-7 text-muted-foreground"
-              onClick={() => setRenameOpen(true)}
-            >
-              <PencilIcon className="size-3.5" aria-hidden="true" />
-              Rename
-            </Button>
+            <div className="ml-auto flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-muted-foreground"
+                onClick={() => setPermissionsOpen(true)}
+              >
+                <ShieldCheckIcon className="size-3.5" aria-hidden="true" />
+                Permissions
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-muted-foreground"
+                onClick={() => setRenameOpen(true)}
+              >
+                <PencilIcon className="size-3.5" aria-hidden="true" />
+                Rename
+              </Button>
+            </div>
           ) : null}
         </div>
 
@@ -118,6 +133,12 @@ export function WorkspaceMembers({
                     </span>
                   </span>
 
+                  {isMember && managerIds.has(member.id) ? (
+                    <span className="shrink-0 rounded-md bg-accent px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+                      Manager
+                    </span>
+                  ) : null}
+
                   {isMember ? (
                     <CheckIcon
                       className="size-4 shrink-0 text-foreground"
@@ -136,11 +157,20 @@ export function WorkspaceMembers({
       </section>
 
       {canManage ? (
-        <WorkspaceFormDialog
-          open={isRenameOpen}
-          onOpenChange={setRenameOpen}
-          workspace={workspace}
-        />
+        <>
+          <WorkspaceFormDialog
+            open={isRenameOpen}
+            onOpenChange={setRenameOpen}
+            workspace={workspace}
+          />
+
+          <WorkspacePermissionsDialog
+            workspace={workspace}
+            currentUserId={currentUserId}
+            open={isPermissionsOpen}
+            onOpenChange={setPermissionsOpen}
+          />
+        </>
       ) : null}
     </>
   );

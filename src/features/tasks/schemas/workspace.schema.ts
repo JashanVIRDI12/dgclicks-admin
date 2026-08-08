@@ -25,6 +25,11 @@ export const workspaceMembersSchema = z.object({
   memberIds: z.array(objectId).max(200, "At most 200 members."),
 });
 
+export const workspaceManagersSchema = z.object({
+  id: objectId,
+  managerIds: z.array(objectId).max(200, "At most 200 managers."),
+});
+
 export const deleteWorkspaceSchema = z.object({
   id: objectId,
   confirmation: z

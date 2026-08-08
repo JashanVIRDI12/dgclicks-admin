@@ -11,6 +11,7 @@ import { BoardGrid } from "@/features/tasks/components/board-grid";
 import { InviteLinkButton } from "@/features/tasks/components/invite-link-button";
 import { WorkspaceOnboarding } from "@/features/tasks/components/workspace-onboarding";
 import { WorkspaceSoloStrip } from "@/features/tasks/components/workspace-solo-strip";
+import { canManageWorkspace } from "@/features/tasks/permissions";
 import { getActiveWorkspaceContext } from "@/features/tasks/server/active-workspace";
 import { listBoardSummaries } from "@/features/tasks/server/board.service";
 import { listWorkspaceInvites } from "@/features/tasks/server/invite.service";
@@ -33,10 +34,11 @@ export default async function BoardsPage() {
 
   const boards = await listBoardSummaries(active.id, session.user.id);
   const isAdmin = getSessionRole(session) === "admin";
+  const canManage = canManageWorkspace(active, session.user.id, isAdmin);
   const isSolo = active.members.length <= 1;
   // Reused by both the header button and the strip, so pressing either hands
   // out the link that already exists rather than minting a second one.
-  const inviteUrl = isAdmin
+  const inviteUrl = canManage
     ? ((await listWorkspaceInvites(active.id, session.user.id))[0]?.url ?? null)
     : null;
 
@@ -45,7 +47,7 @@ export default async function BoardsPage() {
       <PageHeader
         title="Boards"
         description={`Every workflow in ${active.name}.`}
-        actions={isAdmin ? (
+        actions={canManage ? (
           <div className="flex items-center gap-2">
             <InviteLinkButton
               workspaceId={active.id}
@@ -70,7 +72,7 @@ export default async function BoardsPage() {
           workspaceName={active.name}
           workspaceId={active.id}
           existingInviteUrl={inviteUrl}
-          canInvite={isAdmin}
+          canInvite={canManage}
         />
       ) : null}
 
@@ -82,7 +84,7 @@ export default async function BoardsPage() {
             icon={LayoutGridIcon}
             title="No boards yet"
             description="A board is one team or workflow — SEO, Development, Content. It starts with five columns you can rename."
-            action={isAdmin ? (
+            action={canManage ? (
               <BoardFormDialog
                 workspaceId={active.id}
                 trigger={

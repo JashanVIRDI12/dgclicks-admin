@@ -21,6 +21,10 @@ export type Workspace = {
   name: string;
   slug: string;
   members: UserSummary[];
+  /** Members granted workspace administration. See `canManageWorkspace`. */
+  managerIds: string[];
+  /** Always a manager, so a workspace can never be left with nobody to run it. */
+  createdById: string;
   createdAt: string;
 };
 
