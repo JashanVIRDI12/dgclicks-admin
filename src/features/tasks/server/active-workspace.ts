@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { listWorkspacesForUser } from "@/features/tasks/server/workspace.service";
 import type { Workspace } from "@/features/tasks/types";
@@ -44,20 +45,26 @@ export type ActiveWorkspaceContext = {
  * The cookie is untrusted input like anything else from a browser: a value the
  * user is not a member of falls back to their first workspace rather than
  * leaking someone else's boards.
+ *
+ * Memoised per request, like `getSession`, because the app shell and the page
+ * inside it both need it: every navigation was reading the workspace list and
+ * populating its members twice for one screen. Nothing reads this, writes a
+ * workspace, and reads it again in the same request — the actions that change a
+ * workspace go through `getWorkspaceById`, which is deliberately not cached.
  */
-export async function getActiveWorkspaceContext(
-  userId: string,
-): Promise<ActiveWorkspaceContext> {
-  const [workspaces, cookieStore] = await Promise.all([
-    listWorkspacesForUser(userId),
-    cookies(),
-  ]);
+export const getActiveWorkspaceContext = cache(
+  async (userId: string): Promise<ActiveWorkspaceContext> => {
+    const [workspaces, cookieStore] = await Promise.all([
+      listWorkspacesForUser(userId),
+      cookies(),
+    ]);
 
-  const requestedId = cookieStore.get(ACTIVE_WORKSPACE_COOKIE)?.value;
-  const active =
-    workspaces.find((workspace) => workspace.id === requestedId) ??
-    workspaces[0] ??
-    null;
+    const requestedId = cookieStore.get(ACTIVE_WORKSPACE_COOKIE)?.value;
+    const active =
+      workspaces.find((workspace) => workspace.id === requestedId) ??
+      workspaces[0] ??
+      null;
 
-  return { workspaces, active };
-}
+    return { workspaces, active };
+  },
+);

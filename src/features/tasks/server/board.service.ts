@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Types } from "mongoose";
+import { cache } from "react";
 
 import { isAdminUser } from "@/features/auth/server/users.service";
 import {
@@ -64,6 +65,12 @@ async function nextBoardPosition(workspaceId: string): Promise<number> {
  * Returns the document so callers get the workspace id without a second read —
  * every mutation needs both the access check and the board's workspace for the
  * `revalidatePath` that follows.
+ *
+ * Memoised per request: `generateMetadata` and the page body each run it for the
+ * same board, and `assertTaskAccess` runs it again for every task operation in
+ * the request. Keyed on both arguments, so it cannot answer for the wrong board
+ * or the wrong caller — and unlike `getBoardById` no caller writes a board and
+ * then re-reads it through here, which is why that one is left uncached.
  */
 function isBoardEditor(board: BoardDoc, userId: string): boolean {
   return (board.editors ?? []).some(
@@ -71,7 +78,7 @@ function isBoardEditor(board: BoardDoc, userId: string): boolean {
   );
 }
 
-export async function assertBoardAccess(
+export const assertBoardAccess = cache(async function assertBoardAccess(
   boardId: string,
   userId: string,
 ): Promise<BoardDoc> {
@@ -97,7 +104,7 @@ export async function assertBoardAccess(
   }
 
   return board;
-}
+});
 
 /**
  * Mutation access for a board.
@@ -131,8 +138,13 @@ export async function assertBoardEditAccess(
  * the calendar, reports, activity and search all derive their board ids from
  * this call — so an unscoped variant would quietly leak a private board into
  * six screens at once.
+ *
+ * Memoised per request for the same reason it is used everywhere: the app shell
+ * needs it for the sidebar and the page inside the shell needs it again, so
+ * every navigation ran this query twice for one screen. A pure read, and no
+ * caller writes a board and then re-lists in the same request.
  */
-export async function listBoards(
+export const listBoards = cache(async function listBoards(
   workspaceId: string,
   viewerId: string,
   options: { includeArchived?: boolean } = {},
@@ -163,7 +175,7 @@ export async function listBoards(
     .lean<BoardDoc[]>();
 
   return docs.map(toBoard);
-}
+});
 
 /**
  * The board index: every board plus the three numbers its card shows.
@@ -252,17 +264,21 @@ export async function getBoardById(id: string): Promise<Board> {
 }
 
 /**
- * Everything the board page renders, in three queries.
+ * Everything the board page renders, in four queries that all leave together.
  *
  * All four views work off the same snapshot, which is what lets the view
  * switcher change layout without refetching: the data is already in the client.
+ *
+ * The board itself is fetched alongside its contents rather than before them.
+ * None of the three content queries need anything from it — they filter on the
+ * id that was passed in — so awaiting it first only bought one extra round trip
+ * of latency per board load.
  */
 export async function getBoardSnapshot(id: string): Promise<BoardSnapshot> {
   await connectToDatabase();
 
-  const board = await getBoardById(id);
-
-  const [lists, labels, tasks] = await Promise.all([
+  const [board, lists, labels, tasks] = await Promise.all([
+    getBoardById(id),
     ListModel.find({ board: id }).sort({ position: 1 }).lean<ListDoc[]>(),
     LabelModel.find({ board: id }).sort({ name: 1 }).lean<LabelDoc[]>(),
     TaskModel.find({ board: id, parent: null, archivedAt: null })

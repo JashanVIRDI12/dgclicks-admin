@@ -66,17 +66,20 @@ export default async function BoardPage({
 
   // Generation happens on read, which is the trade-off for having no scheduler.
   // It is claimed atomically, so two people opening this board at once still
-  // produce one occurrence.
+  // produce one occurrence. Awaited before the snapshot because a task it spawns
+  // has to be in the snapshot it spawned during, not the next one.
   await catchUpRecurrences([boardId]);
 
-  const query = await searchParams;
-  const requestedView = Array.isArray(query.view) ? query.view[0] : query.view;
-  const requestedTask = Array.isArray(query.task) ? query.task[0] : query.task;
-
-  const [snapshot, { active }] = await Promise.all([
+  // `searchParams` resolves locally, so it joins the round trips rather than
+  // waiting behind them.
+  const [query, snapshot, { active }] = await Promise.all([
+    searchParams,
     getBoardSnapshot(boardId),
     getActiveWorkspaceContext(session.user.id),
   ]);
+
+  const requestedView = Array.isArray(query.view) ? query.view[0] : query.view;
+  const requestedTask = Array.isArray(query.task) ? query.task[0] : query.task;
 
   const boardWorkspace =
     active?.id === snapshot.board.workspaceId

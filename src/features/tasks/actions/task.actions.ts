@@ -153,6 +153,15 @@ export const updateTaskAction = createAction({
  * action on a board, and one activity entry per drag would bury everything else
  * in the feed. Completion changes that a move causes are recorded by the board
  * itself through `completedAt`.
+ *
+ * It is also the only mutation here that usually revalidates nothing. Position
+ * is the one field no other screen in the app displays, and the board that does
+ * display it owns the change optimistically and refetches its own snapshot — so
+ * a plain reorder has nothing to tell the server-rendered pages. Revalidating
+ * on every drag made each one re-render this page on the server *and* expire the
+ * client cache for every page already visited, which is why dragging felt like
+ * it cost a page load. Landing in or out of Done is different: that changes what
+ * the dashboard, my tasks, the calendar and the board index all count.
  */
 export const moveTaskAction = createAction({
   auth: true,
@@ -162,6 +171,8 @@ export const moveTaskAction = createAction({
     const boardId = existing.board.toString();
 
     const task = await moveTask(input.id, boardId, input);
+    const completionChanged =
+      Boolean(task.completedAt) !== Boolean(existing.completedAt);
 
     // Dragging into Done completes the task, so it has to fire recurrence for
     // the same reason ticking the checkbox does — the two are one action with
@@ -170,7 +181,10 @@ export const moveTaskAction = createAction({
       await spawnOnCompletion(input.id);
     }
 
-    revalidateTaskScope(boardId);
+    if (completionChanged) {
+      revalidateTaskScope(boardId);
+    }
+
     return task;
   },
 });

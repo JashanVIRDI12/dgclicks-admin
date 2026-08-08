@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { UserModel, type UserDoc } from "@/features/auth/server/user.model";
 import { connectToDatabase } from "@/lib/db/connect";
 
@@ -39,9 +41,15 @@ export async function listTeamMembers(): Promise<TeamMember[]> {
  * checks in the data layer run deep below the action that has the session in
  * hand — and because a role revoked five minutes ago should take effect on the
  * next request rather than the next sign-in.
+ *
+ * Memoised per request: `listBoards`, `assertBoardAccess`,
+ * `assertBoardEditAccess` and `assertWorkspaceManager` each ask this, so one
+ * board render asked it three or four times and got the same answer every time.
+ * A role cannot change part-way through a request, so there is nothing for the
+ * cache to be wrong about.
  */
-export async function isAdminUser(userId: string): Promise<boolean> {
+export const isAdminUser = cache(async (userId: string): Promise<boolean> => {
   await connectToDatabase();
 
   return Boolean(await UserModel.exists({ _id: userId, role: "admin" }));
-}
+});
