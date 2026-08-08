@@ -189,3 +189,13 @@ export const LIMITS = {
 
 export const BOARD_LABEL_LIMIT = 40;
 export const TASK_SEARCH_LIMIT = 8;
+
+/**
+ * How many subtasks may be listed while creating their parent.
+ *
+ * They are written in the same request as the parent, so an unbounded array
+ * would turn one create into an arbitrarily long write. Adding more afterwards
+ * from the task drawer is not capped — this bounds the single request, not the
+ * task.
+ */
+export const SUBTASK_CREATE_LIMIT = 20;

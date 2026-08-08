@@ -1,7 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarIcon, Clock3Icon, RepeatIcon, UserIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  Clock3Icon,
+  ListTreeIcon,
+  RepeatIcon,
+  UserIcon,
+  XIcon,
+} from "lucide-react";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -40,6 +48,7 @@ import {
 import {
   RECURRENCE_FREQUENCIES,
   RECURRENCE_FREQUENCY_LABELS,
+  SUBTASK_CREATE_LIMIT,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
 } from "@/features/tasks/constants";
@@ -65,8 +74,103 @@ const DEFAULT_VALUES: CreateTaskFormValues = {
   dueDate: null,
   labelIds: [],
   recurrenceFrequency: null,
+  subtasks: [],
   estimateHours: null,
 };
+
+/**
+ * Subtask titles, staged until the parent exists.
+ *
+ * A subtask is a real task with a parent id, so there is nothing to hang one off
+ * until the create succeeds. The titles are collected here and sent with the
+ * parent; owners and dates are set from each subtask's own drawer afterwards,
+ * which is the same division the task drawer's subtask list uses.
+ *
+ * The draft commits on blur as well as on Enter, so clicking straight through to
+ * Create does not silently discard the line still being typed.
+ */
+function SubtaskDrafts({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const isFull = value.length >= SUBTASK_CREATE_LIMIT;
+
+  function add() {
+    const trimmed = draft.trim();
+
+    if (!trimmed || isFull) return;
+
+    onChange([...value, trimmed]);
+    setDraft("");
+  }
+
+  return (
+    <div className="space-y-2">
+      {value.length > 0 ? (
+        <ul className="space-y-1">
+          {value.map((title, index) => (
+            <li
+              key={`${index}-${title}`}
+              className="group/subtask flex items-center gap-2 rounded-lg border bg-muted/30 px-2.5 py-1.5"
+            >
+              <span className="min-w-0 flex-1 truncate text-sm">{title}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove ${title}`}
+                onClick={() =>
+                  onChange(value.filter((_, position) => position !== index))
+                }
+                className="size-6 text-muted-foreground opacity-0 transition-opacity group-hover/subtask:opacity-100 focus-visible:opacity-100"
+              >
+                <XIcon className="size-3.5" aria-hidden="true" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {isFull ? (
+        <p className="text-sm text-muted-foreground">
+          That is the maximum of {SUBTASK_CREATE_LIMIT} here. Add any more from
+          the task itself.
+        </p>
+      ) : (
+        <div className="flex gap-2">
+          <Input
+            id="new-task-subtask"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={add}
+            onKeyDown={(event) => {
+              // Enter belongs to the subtask here, not the form — submitting the
+              // task would lose the line being typed.
+              if (event.key === "Enter") {
+                event.preventDefault();
+                add();
+              }
+            }}
+            placeholder="e.g. Pull last month's numbers"
+            aria-label="New subtask"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={add}
+            disabled={draft.trim().length === 0}
+          >
+            Add
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function localDate(value: string | null): Date | null {
   if (!value) return null;
@@ -86,7 +190,6 @@ export function CreateTaskSheet({
   listName,
   labels,
   members,
-  onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -95,7 +198,6 @@ export function CreateTaskSheet({
   listName: string | null;
   labels: Label[];
   members: UserSummary[];
-  onCreated: (taskId: string) => void;
 }) {
   const createTask = useCreateTask(boardId);
   const form = useForm<CreateTaskFormValues>({
@@ -118,7 +220,7 @@ export function CreateTaskSheet({
     try {
       const dueDate = localDate(values.dueDate);
       const recurrenceAnchor = dueDate ?? new Date();
-      const task = await createTask.mutateAsync({
+      await createTask.mutateAsync({
         listId,
         title: values.title,
         description: values.description || null,
@@ -127,6 +229,7 @@ export function CreateTaskSheet({
         startDate: localDate(values.startDate),
         dueDate,
         labelIds: values.labelIds,
+        subtasks: values.subtasks,
         estimateMinutes:
           values.estimateHours === null
             ? null
@@ -143,9 +246,11 @@ export function CreateTaskSheet({
       });
 
       form.reset(DEFAULT_VALUES);
+      // Nothing opens behind it: the sheet already collected everything the
+      // drawer would have shown, so following a create with a second panel just
+      // leaves the reader another thing to close before they can see the board.
       onOpenChange(false);
       toast.success("Task created.");
-      onCreated(task.id);
     } catch {
       // The mutation owns the public error toast and cache rollback.
     }
@@ -350,6 +455,28 @@ export function CreateTaskSheet({
                     <FieldDescription>
                       Select existing labels or create one here.
                     </FieldDescription>
+                  </Field>
+                )}
+              />
+
+              <Controller
+                control={form.control}
+                name="subtasks"
+                render={({ field }) => (
+                  <Field data-invalid={Boolean(errors.subtasks)}>
+                    <FieldLabel htmlFor="new-task-subtask">
+                      <ListTreeIcon className="size-3.5" />
+                      Subtasks
+                    </FieldLabel>
+                    <SubtaskDrafts
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                    <FieldDescription>
+                      Each becomes its own task under this one. Give them owners
+                      and dates from the task afterwards.
+                    </FieldDescription>
+                    <FieldError errors={[errors.subtasks]} />
                   </Field>
                 )}
               />

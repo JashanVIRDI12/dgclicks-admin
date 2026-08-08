@@ -541,6 +541,7 @@ export function useCreateTask(boardId: string) {
       labelIds?: string[];
       estimateMinutes?: number | null;
       recurrence?: RecurrenceInput;
+      subtasks?: string[];
     }) => {
       const result = await createTaskAction({ ...input, boardId });
 

@@ -7,10 +7,12 @@ import {
   KanbanIcon,
   ListIcon,
   SearchIcon,
+  ShieldCheckIcon,
   SlidersHorizontalIcon,
   XIcon,
   type LucideIcon,
 } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { AskAiButton } from "@/features/assistant/components/ask-ai-button";
 import { boardAssistantActions } from "@/features/assistant/prompts";
+import { BoardPermissionsDialog } from "@/features/tasks/components/board-permissions-dialog";
 import { LabelDot } from "@/features/tasks/components/label-chip";
 import { PriorityIcon } from "@/features/tasks/components/task-meta";
 import {
@@ -35,7 +38,7 @@ import {
   type TaskPriority,
 } from "@/features/tasks/constants";
 import type { UserSummary } from "@/features/auth/types";
-import type { Label } from "@/features/tasks/types";
+import type { Board, Label } from "@/features/tasks/types";
 import { cn } from "@/lib/utils";
 
 export type BoardFilters = {
@@ -82,20 +85,23 @@ export function BoardToolbar({
   onViewChange,
   filters,
   onFiltersChange,
+  board,
   labels,
   members,
-  boardName,
+  isAdmin,
 }: {
   view: BoardView;
   onViewChange: (view: BoardView) => void;
   filters: BoardFilters;
   onFiltersChange: (filters: BoardFilters) => void;
+  board: Board;
   labels: Label[];
   members: UserSummary[];
-  /** Named in the assistant prompts so it can find this board by title. */
-  boardName: string;
+  /** Who may see and change the board is an administrator's decision alone. */
+  isAdmin: boolean;
 }) {
   const activeCount = countActiveFilters(filters);
+  const [isPermissionsOpen, setPermissionsOpen] = useState(false);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -248,6 +254,27 @@ export function BoardToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {isAdmin ? (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() => setPermissionsOpen(true)}
+          >
+            <ShieldCheckIcon className="size-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">Permissions</span>
+          </Button>
+
+          <BoardPermissionsDialog
+            board={board}
+            members={members}
+            open={isPermissionsOpen}
+            onOpenChange={setPermissionsOpen}
+          />
+        </>
+      ) : null}
+
       {activeCount > 0 || filters.query ? (
         <Button
           variant="ghost"
@@ -260,8 +287,9 @@ export function BoardToolbar({
         </Button>
       ) : null}
 
+      {/* Named so the assistant can find this board by title. */}
       <AskAiButton
-        actions={boardAssistantActions(boardName)}
+        actions={boardAssistantActions(board.name)}
         className="h-8"
       />
     </div>

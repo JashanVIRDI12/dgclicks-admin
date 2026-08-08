@@ -139,7 +139,6 @@ export default async function BoardPage({
           taskCount={snapshot.tasks.length}
           isAdmin={isAdmin}
           canEdit={canEdit}
-          members={boardWorkspace.members}
         />
       </div>
 

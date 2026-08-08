@@ -229,6 +229,8 @@ export async function createTask(
     labelIds?: string[];
     estimateMinutes?: number | null;
     recurrence?: RecurrenceInput;
+    /** Titles to spawn as children of the new task. */
+    subtasks?: string[];
   },
   createdById: string,
 ): Promise<Task> {
@@ -282,6 +284,27 @@ export async function createTask(
     completedAt: list.isTerminal ? new Date() : null,
     createdBy: new Types.ObjectId(createdById),
   });
+
+  // Children are titles only: they share the parent's column so the board's
+  // `parent: null` filter keeps them off it, and everything else about them —
+  // owner, dates, labels — is set from their own drawer afterwards. Their
+  // positions can be seeded outright because a task created a moment ago has no
+  // other children to sort against.
+  if (input.subtasks?.length) {
+    const positions = sequentialPositions(input.subtasks.length);
+
+    await TaskModel.insertMany(
+      input.subtasks.map((title, index) => ({
+        board: new Types.ObjectId(input.boardId),
+        list: list._id,
+        parent: created._id,
+        title,
+        position: positions[index],
+        completedAt: list.isTerminal ? new Date() : null,
+        createdBy: new Types.ObjectId(createdById),
+      })),
+    );
+  }
 
   return getTaskById(created._id.toString());
 }

@@ -3,8 +3,7 @@
 import {
   ArchiveIcon,
   ArchiveRestoreIcon,
-  MoreHorizontalIcon,
-  ShieldCheckIcon,
+  SettingsIcon,
   SlidersHorizontalIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -31,13 +30,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import type { UserSummary } from "@/features/auth/types";
 import {
   deleteBoardAction,
   setBoardArchivedAction,
 } from "@/features/tasks/actions/board.actions";
 import { BoardFormDialog } from "@/features/tasks/components/board-form-dialog";
-import { BoardPermissionsDialog } from "@/features/tasks/components/board-permissions-dialog";
 import type { Board } from "@/features/tasks/types";
 
 /**
@@ -45,26 +42,24 @@ import type { Board } from "@/features/tasks/types";
  *
  * Archive is the everyday action and sits first; deleting takes the columns,
  * cards, comments and files with it, which is why it is admin-only and why the
- * confirmation makes you type the name rather than click once.
+ * confirmation makes you type the name rather than click once. Permissions are
+ * not here — they have their own button on the toolbar.
  */
 export function BoardMenu({
   board,
   taskCount,
   isAdmin,
   canEdit,
-  members,
 }: {
   board: Board;
   taskCount: number;
   isAdmin: boolean;
   canEdit: boolean;
-  members: UserSummary[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isEditOpen, setEditOpen] = useState(false);
   const [isDeleteOpen, setDeleteOpen] = useState(false);
-  const [isPermissionsOpen, setPermissionsOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
 
   const isArchived = board.archivedAt !== null;
@@ -113,7 +108,7 @@ export function BoardMenu({
             aria-label="Board options"
             className="shrink-0 text-muted-foreground"
           >
-            <MoreHorizontalIcon className="size-4" />
+            <SettingsIcon className="size-4" />
           </Button>
         </DropdownMenuTrigger>
 
@@ -127,11 +122,6 @@ export function BoardMenu({
 
           {isAdmin ? (
             <>
-              <DropdownMenuItem onSelect={() => setPermissionsOpen(true)}>
-                <ShieldCheckIcon className="size-4" aria-hidden="true" />
-                Board permissions
-              </DropdownMenuItem>
-
               <DropdownMenuItem onSelect={toggleArchived} disabled={isPending}>
                 {isArchived ? (
                   <>
@@ -167,13 +157,6 @@ export function BoardMenu({
         board={board}
         open={isEditOpen}
         onOpenChange={setEditOpen}
-      />
-
-      <BoardPermissionsDialog
-        board={board}
-        members={members}
-        open={isPermissionsOpen}
-        onOpenChange={setPermissionsOpen}
       />
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setDeleteOpen}>

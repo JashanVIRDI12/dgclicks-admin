@@ -156,9 +156,10 @@ export function BoardWorkspace({
         onViewChange={changeView}
         filters={filters}
         onFiltersChange={setFilters}
+        board={snapshot.board}
         labels={snapshot.labels}
         members={members}
-        boardName={snapshot.board.name}
+        isAdmin={isAdmin}
       />
 
       {/*

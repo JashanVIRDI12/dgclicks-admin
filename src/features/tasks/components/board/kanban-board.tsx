@@ -371,7 +371,6 @@ export function KanbanBoard({
           listName={createList?.name ?? null}
           labels={snapshot.labels}
           members={members}
-          onCreated={onOpenTask}
         />
       ) : null}
 

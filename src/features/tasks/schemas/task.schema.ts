@@ -4,6 +4,7 @@ import {
   BOARD_LABEL_LIMIT,
   LIMITS,
   RECURRENCE_FREQUENCIES,
+  SUBTASK_CREATE_LIMIT,
   TASK_PRIORITIES,
 } from "@/features/tasks/constants";
 import { objectId } from "@/lib/validation";
@@ -82,6 +83,17 @@ export const taskFieldsSchema = z.object({
 });
 
 /**
+ * Titles for subtasks spawned alongside their parent.
+ *
+ * A subtask is a real task with a parent id, so there is nothing to attach one
+ * to until the parent exists — the create form collects the titles and they are
+ * written with the parent in the same request rather than one call each.
+ */
+const subtaskTitlesSchema = z
+  .array(taskTitleSchema)
+  .max(SUBTASK_CREATE_LIMIT, `At most ${SUBTASK_CREATE_LIMIT} subtasks.`);
+
+/**
  * Creating only requires a title and a home. Everything else is set afterwards
  * from the drawer, which is what keeps quick-create to one keystroke and one
  * field.
@@ -96,6 +108,7 @@ export const createTaskSchema = taskFieldsSchema
     /** Set to create this as a subtask of an existing task. */
     parentId: objectId.optional(),
     recurrence: recurrenceSchema.optional(),
+    subtasks: subtaskTitlesSchema.optional(),
   })
   .superRefine((task, context) => {
     if (task.startDate && task.dueDate && task.dueDate < task.startDate) {
@@ -103,6 +116,17 @@ export const createTaskSchema = taskFieldsSchema
         code: "custom",
         path: ["dueDate"],
         message: "Due date cannot be before the start date.",
+      });
+    }
+
+    // Subtasks are one level deep. The drawer renders a parent's children as a
+    // flat list with no way in to a third level, so a grandchild would be a row
+    // that exists in the database and nowhere on screen.
+    if (task.parentId && task.subtasks?.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["subtasks"],
+        message: "A subtask cannot have subtasks of its own.",
       });
     }
   });
@@ -128,6 +152,7 @@ export const createTaskFormSchema = z
       .array(objectId)
       .max(BOARD_LABEL_LIMIT, `At most ${BOARD_LABEL_LIMIT} labels.`),
     recurrenceFrequency: z.enum(RECURRENCE_FREQUENCIES).nullable(),
+    subtasks: subtaskTitlesSchema,
     estimateHours: z
       .number()
       .min(0.25, "Estimate at least 15 minutes.")
