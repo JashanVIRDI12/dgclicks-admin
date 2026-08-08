@@ -70,7 +70,7 @@ export default async function SettingsPage() {
           </Button>
         </section>
 
-        {isAdmin ? <WorkspaceDangerZone workspace={active} /> : null}
+        {canManage ? <WorkspaceDangerZone workspace={active} /> : null}
       </FadeIn>
     </div>
   );

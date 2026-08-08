@@ -14,7 +14,7 @@ import { BoardMenu } from "@/features/tasks/components/board-menu";
 import { BoardWorkspace } from "@/features/tasks/components/board/board-workspace";
 import { WorkspaceBanner } from "@/features/tasks/components/workspace-banner";
 import { BOARD_VIEWS, DEFAULT_BOARD_VIEW } from "@/features/tasks/constants";
-import { canEditBoard } from "@/features/tasks/permissions";
+import { canEditBoard, canManageWorkspace } from "@/features/tasks/permissions";
 import { getActiveWorkspaceContext } from "@/features/tasks/server/active-workspace";
 import {
   assertBoardAccess,
@@ -88,6 +88,13 @@ export default async function BoardPage({
   const owningWorkspace = active?.id === boardWorkspace.id ? null : boardWorkspace;
   const isAdmin = getSessionRole(session) === "admin";
   const canEdit = canEditBoard(snapshot.board, session.user.id, isAdmin);
+  // Setting a board's permissions belongs to whoever runs the workspace the
+  // board lives in, which is not the same question as the global role.
+  const canManageWorkspaceBoards = canManageWorkspace(
+    boardWorkspace,
+    session.user.id,
+    isAdmin,
+  );
 
   return (
     // The marker the app shell keys its full-bleed layout off — the board needs
@@ -160,6 +167,7 @@ export default async function BoardPage({
           image: session.user.image ?? null,
         }}
         isAdmin={isAdmin}
+        canManageWorkspace={canManageWorkspaceBoards}
         canEdit={canEdit}
       />
     </div>

@@ -147,12 +147,24 @@ export const updateBoardAction = createAction({
   },
 });
 
+/**
+ * Who may see and edit one board.
+ *
+ * A workspace-management right rather than a global one: deciding that a board
+ * is private is part of running the workspace it lives in, and the person who
+ * created that workspace should not need an administrator to do it.
+ *
+ * `assertBoardAccess` still runs first, so a private board somebody else set up
+ * stays invisible — a manager cannot re-permission a board they are not allowed
+ * to know exists.
+ */
 export const setBoardPermissionsAction = createAction({
-  auth: ["admin"],
+  auth: true,
   input: boardPermissionsSchema,
   handler: async ({ input, session }): Promise<Board> => {
     const { id, ...permissions } = input;
-    await assertBoardAccess(id, session.user.id);
+    const existing = await assertBoardAccess(id, session.user.id);
+    await assertWorkspaceManager(existing.workspace.toString(), session.user.id);
 
     const before = await getBoardById(id);
     const board = await setBoardPermissions(id, permissions);

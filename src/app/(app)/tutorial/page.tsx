@@ -108,16 +108,18 @@ export default async function TutorialPage() {
             <Card>
               <p className="text-sm font-medium">Workspace manager</p>
               <p className="mt-1 text-sm text-pretty text-muted-foreground">
-                Also renames the workspace, decides who is in it, hands out
-                invite links, and creates boards.
+                Runs one workspace: its name, its people, its invite links, its
+                boards and who can see them — and can delete it. Whoever made a
+                workspace is one.
               </p>
             </Card>
 
             <Card>
               <p className="text-sm font-medium">Administrator</p>
               <p className="mt-1 text-sm text-pretty text-muted-foreground">
-                Manages every workspace they belong to, sets board permissions,
-                and alone can permanently delete a task, board or workspace.
+                Manages every workspace they belong to, and alone can archive or
+                delete a board, delete a task outright, or remove someone
+                else&apos;s comment or file.
               </p>
             </Card>
           </div>
@@ -142,12 +144,12 @@ export default async function TutorialPage() {
           </Note>
 
           <Note title="A board can be narrower than its workspace">
-            Boards are open to everyone in the workspace by default. An
-            administrator can restrict editing to named people from the board
-            toolbar&apos;s Permissions button, or make a board private. A
+            Boards are open to everyone in the workspace by default. Whoever
+            manages the workspace can restrict editing to named people from the
+            board toolbar&apos;s Permissions button, or make a board private. A
             private board is hidden from everyone else everywhere in the app
             rather than greyed out, so you will never be shown one you cannot
-            open.
+            open — including from a manager who was not given it.
           </Note>
         </Section>
 

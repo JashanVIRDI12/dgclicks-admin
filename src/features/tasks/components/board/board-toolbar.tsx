@@ -88,7 +88,7 @@ export function BoardToolbar({
   board,
   labels,
   members,
-  isAdmin,
+  canManageWorkspace,
 }: {
   view: BoardView;
   onViewChange: (view: BoardView) => void;
@@ -97,8 +97,11 @@ export function BoardToolbar({
   board: Board;
   labels: Label[];
   members: UserSummary[];
-  /** Who may see and change the board is an administrator's decision alone. */
-  isAdmin: boolean;
+  /**
+   * Who may see and change a board is decided by whoever runs its workspace —
+   * the creator, an appointed manager, or a global admin.
+   */
+  canManageWorkspace: boolean;
 }) {
   const activeCount = countActiveFilters(filters);
   const [isPermissionsOpen, setPermissionsOpen] = useState(false);
@@ -254,7 +257,7 @@ export function BoardToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {isAdmin ? (
+      {canManageWorkspace ? (
         <>
           <Button
             variant="outline"

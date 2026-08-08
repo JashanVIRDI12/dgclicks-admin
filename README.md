@@ -256,7 +256,8 @@ a separate, smaller grant: its **managers**, set from **Settings → Permissions
 | Appoint other managers | | ✓ | ✓ |
 | Create and revoke invite links | | ✓ | ✓ |
 | Create boards | | ✓ | ✓ |
-| Delete the workspace | | | ✓ |
+| Set a board's permissions | | ✓ | ✓ |
+| Delete the workspace | | ✓ | ✓ |
 
 Three people are managers whatever the stored list says: anyone listed on the
 workspace, **the creator** — so a workspace can never be left with nobody able
@@ -265,8 +266,17 @@ without a backfill — and **any global admin**, so a workspace cannot lock them
 out. That rule is `canManageWorkspace` on the client and `assertWorkspaceManager`
 on the server; the client copy exists only to decide what to render.
 
-Deleting is the one thing a manager does not get. It destroys every board, task,
-comment and file in the workspace and there is nothing to undo it with.
+**Managers own the workspace outright, including deleting it.** Anything else
+means someone who creates their own workspace cannot set up a private board in it
+or get rid of it without finding an administrator — the owner locked out of the
+thing they made. Deletion destroys every board, task, comment and file inside and
+cannot be undone; what stands between a manager and that is the confirmation,
+which re-checks the typed name against the database, not the size of the
+audience.
+
+What stays with global administrators is narrower and per-record: archiving,
+deleting or reordering a board, permanently deleting a task, and removing another
+person's comment or attachment.
 
 Two smaller rules follow from the same place. A manager must already be a
 member — administering a workspace you cannot open is a setting with no effect —
@@ -284,7 +294,8 @@ than a picker: a manager can remove someone from it, and that is all.
 ### Board access
 
 Workspace membership is the floor. Each board then sets one of three modes,
-edited from the board toolbar → **Permissions** (admins only):
+edited from the board toolbar → **Permissions**, by whoever manages the
+workspace the board is in:
 
 | Mode | Can see it | Can edit it |
 | --- | --- | --- |

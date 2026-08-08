@@ -100,6 +100,7 @@ export function BoardWorkspace({
   members,
   currentUser,
   isAdmin,
+  canManageWorkspace,
   canEdit,
 }: {
   initialSnapshot: BoardSnapshot;
@@ -108,6 +109,8 @@ export function BoardWorkspace({
   members: UserSummary[];
   currentUser: UserSummary;
   isAdmin: boolean;
+  /** Runs the workspace this board is in. Gates the Permissions button. */
+  canManageWorkspace: boolean;
   canEdit: boolean;
 }) {
   const boardId = initialSnapshot.board.id;
@@ -159,7 +162,7 @@ export function BoardWorkspace({
         board={snapshot.board}
         labels={snapshot.labels}
         members={members}
-        isAdmin={isAdmin}
+        canManageWorkspace={canManageWorkspace}
       />
 
       {/*

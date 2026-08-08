@@ -77,12 +77,15 @@ no caller.
   calling; `assertBoardAccess` / `assertTaskAccess` prove they may touch that
   record. Every board, task, comment and attachment operation needs both.
 - **Managing a workspace is not `auth: ["admin"]`.** Renaming a workspace,
-  changing its people, handing out invite links and creating boards go through
+  changing its people, handing out invite links, creating boards, setting a
+  board's permissions and deleting the workspace all go through
   `assertWorkspaceManager`, which folds in the creator and global admins on top
-  of the stored `managers`. A global role check in place of it locks out the
-  managers the permission exists to create; `assertWorkspaceMember` in place of
-  it lets any member re-permission the workspace. Deleting a workspace is the
-  one exception and stays `auth: ["admin"]`.
+  of the stored `managers`. A global role check in place of it locks the owner
+  out of the workspace they made — which is exactly the bug this replaced;
+  `assertWorkspaceMember` in place of it lets any member re-permission the
+  workspace. What still stays `auth: ["admin"]` is per-board and per-record:
+  archiving, deleting or reordering a board, deleting a task, and removing
+  someone else's comment or attachment.
 - **Never list boards without a viewer.** `listBoards(workspaceId, viewerId)`
   applies the `private` visibility filter inside the query, and the sidebar,
   dashboard, my tasks, calendar, reports, activity and search all derive their

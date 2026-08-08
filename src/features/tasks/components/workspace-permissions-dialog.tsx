@@ -85,10 +85,10 @@ export function WorkspacePermissionsDialog({
         <DialogHeader>
           <DialogTitle>Workspace permissions</DialogTitle>
           <DialogDescription>
-            Managers can rename this workspace, decide who is in it, hand out
-            invite links and create boards. Everyone else works inside it
-            normally. Administrators always manage it, and only they can delete
-            it.
+            Managers run this workspace: its name, its people, its invite links,
+            its boards and their permissions — and they can delete the whole
+            workspace. Everyone else works inside it normally. Administrators
+            always manage it, whether or not they are listed here.
           </DialogDescription>
         </DialogHeader>
 

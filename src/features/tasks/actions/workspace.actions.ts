@@ -172,17 +172,21 @@ export const setWorkspaceManagersAction = createAction({
 });
 
 /**
- * Deleting is the one workspace action a manager does not get.
+ * Deleting a workspace destroys every board, task, comment and file in it, and
+ * there is nothing to undo it with.
  *
- * It destroys every board, task, comment and file inside the workspace, and
- * unlike every other setting here there is nothing to undo it with — so it
- * stays with global administrators.
+ * It still belongs to the people who run the workspace rather than to the global
+ * role: somebody who creates their own workspace has to be able to get rid of it
+ * without going to an administrator. The guard against a misclick is the
+ * confirmation, not the audience — `deleteWorkspace` re-checks the typed name
+ * against the database, so reaching this action is not the same as being able to
+ * fire it.
  */
 export const deleteWorkspaceAction = createAction({
-  auth: ["admin"],
+  auth: true,
   input: deleteWorkspaceSchema,
   handler: async ({ input, session }) => {
-    await assertWorkspaceMember(input.id, session.user.id);
+    await assertWorkspaceManager(input.id, session.user.id);
     await deleteWorkspace(input.id, input.confirmation);
 
     const [cookieStore, remainingWorkspaces] = await Promise.all([
