@@ -158,11 +158,19 @@ function SubtaskDrafts({
             placeholder="e.g. Pull last month's numbers"
             aria-label="New subtask"
           />
+          {/*
+            Mobile only. A touch keyboard's return key is not a reliable "add
+            another" — and there is nothing to click instead — so the button
+            earns its space there. On a real keyboard Enter already does it, and
+            the draft commits on blur either way, so the button was only ever a
+            second control for the same keystroke.
+          */}
           <Button
             type="button"
             variant="outline"
             onClick={add}
             disabled={draft.trim().length === 0}
+            className="sm:hidden"
           >
             Add
           </Button>

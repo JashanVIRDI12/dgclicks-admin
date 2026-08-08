@@ -122,7 +122,7 @@ export const updateTaskAction = createAction({
     const boardId = existing.board.toString();
 
     const before = await getTaskById(id);
-    const task = await updateTask(id, boardId, patch);
+    const task = await updateTask(id, boardId, patch, session.user.id);
 
     await recordActivity({
       actorId: session.user.id,

@@ -130,8 +130,16 @@ export type Task = {
   updatedAt: string;
 };
 
-/** Everything the drawer needs that a card does not. */
+/**
+ * Everything the drawer needs that a card does not.
+ *
+ * `assignedBy` lives here rather than on `Task` deliberately: only the drawer
+ * shows it, and adding it to the card shape would put another `populate` on the
+ * board query — the one read that has to stay fast.
+ */
 export type TaskDetail = Task & {
+  /** Who gave the task to its assignee. Null when nobody is assigned. */
+  assignedBy: UserSummary | null;
   timeEntries: TimeEntry[];
   subtasks: Task[];
 };

@@ -133,6 +133,14 @@ export default async function TutorialPage() {
             so it cannot lock them out.
           </p>
 
+          <Note title="People join by invite link">
+            The members list shows this workspace and nobody else — it is a
+            record of who is here, not a directory of everyone with an account.
+            To bring somebody in, a manager sends them an invite link from
+            Settings. Removing a member drops any management they had along with
+            them.
+          </Note>
+
           <Note title="A board can be narrower than its workspace">
             Boards are open to everyone in the workspace by default. An
             administrator can restrict editing to named people from the board
@@ -225,6 +233,15 @@ export default async function TutorialPage() {
             you can dismiss by clicking outside it must not be able to lose an
             edit.
           </Note>
+
+          <p className="text-sm text-pretty text-muted-foreground">
+            Under the assignee, <span className="font-medium text-foreground">
+            Assigned by</span> shows who handed the task over. Reassigning it
+            rewrites that to whoever made the change, so it always names the
+            person behind the current assignment rather than the first one — and
+            it reads &ldquo;Self-assigned&rdquo; when somebody picked up the work
+            themselves.
+          </p>
         </Section>
 
         <Section

@@ -252,7 +252,7 @@ a separate, smaller grant: its **managers**, set from **Settings → Permissions
 | --- | --- | --- | --- |
 | See and work on the boards they can reach | ✓ | ✓ | ✓ |
 | Rename the workspace | | ✓ | ✓ |
-| Add and remove members | | ✓ | ✓ |
+| Remove members | | ✓ | ✓ |
 | Appoint other managers | | ✓ | ✓ |
 | Create and revoke invite links | | ✓ | ✓ |
 | Create boards | | ✓ | ✓ |
@@ -274,6 +274,12 @@ and removing someone from the workspace drops their management with them, so a
 manager id left behind cannot silently hand the role back the day they are
 re-added. Live invite links are shown only to managers, because the link
 contains the token and the token is the credential.
+
+**The members list shows the workspace's own members and nobody else.** It
+briefly listed every account in the app with tick boxes, which turned the screen
+that answers "who is in this workspace" into a company directory that happened to
+be sorted by name. Joining is by invite link only, so the list is a record rather
+than a picker: a manager can remove someone from it, and that is all.
 
 ### Board access
 
@@ -399,6 +405,17 @@ linked to from the activity feed or the palette.
 
 Every field autosaves on change or blur. A panel that closes when you click
 outside it cannot have a Save button.
+
+**Assigned by** records who handed the task to its assignee. It is written from
+the same branch that writes `assignee`, so the two cannot disagree: picking
+somebody rewrites it to whoever made that change, and unassigning clears it,
+which means the row can never credit an assignment that has since been handed on.
+It reads "Self-assigned" when the two are the same person. The field lives on
+`TaskDetail` rather than `Task` and populates only in `TASK_DETAIL_POPULATE` — the
+board loads every card through `TASK_POPULATE`, and each extra path there is
+another round trip on the one read that has to stay fast. The activity feed
+records the change too, but it is paged and prunable, so the current answer is
+stored on the task.
 
 Checklists and subtasks are both there because they are different things: a
 checklist item is a string and a tick, embedded on the task; a subtask is a real

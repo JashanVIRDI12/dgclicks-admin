@@ -243,6 +243,28 @@ export function TaskProperties({
         </Select>
       </Row>
 
+      {/*
+        Only shown once there is an assignment to attribute. Picking somebody
+        rewrites this to whoever made that change, so the row can never credit
+        an assignment that has since been handed on.
+      */}
+      {task.assignee && task.assignedBy ? (
+        <Row label="Assigned by">
+          <span className="inline-flex h-7 items-center gap-1.5 px-2 text-sm">
+            {task.assignedBy.id === task.assignee.id ? (
+              <span className="text-muted-foreground">
+                Self-assigned
+              </span>
+            ) : (
+              <>
+                <AssigneeAvatar user={task.assignedBy} className="size-4" />
+                {task.assignedBy.name}
+              </>
+            )}
+          </span>
+        </Row>
+      ) : null}
+
       <Row label="Due">
         <DateField
           value={task.dueDate}

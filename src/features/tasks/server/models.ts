@@ -324,6 +324,11 @@ const taskSchema = new Schema(
       default: "none",
     },
     assignee: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    /**
+     * Who handed the task to its assignee. Cleared alongside the assignee, so it
+     * can never name the person who set an assignment that no longer exists.
+     */
+    assignedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     startDate: { type: Date, default: null },
     dueDate: { type: Date, default: null },
     labels: [{ type: Schema.Types.ObjectId, ref: "Label" }],

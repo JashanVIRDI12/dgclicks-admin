@@ -1,35 +1,32 @@
 "use client";
 
-import { CheckIcon, PencilIcon, ShieldCheckIcon } from "lucide-react";
+import { PencilIcon, ShieldCheckIcon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import type { UserSummary } from "@/features/auth/types";
 import { setWorkspaceMembersAction } from "@/features/tasks/actions/workspace.actions";
 import { WorkspaceFormDialog } from "@/features/tasks/components/workspace-form-dialog";
 import { WorkspacePermissionsDialog } from "@/features/tasks/components/workspace-permissions-dialog";
 import { AssigneeAvatar } from "@/features/tasks/components/task-meta";
 import type { Workspace } from "@/features/tasks/types";
-import { cn } from "@/lib/utils";
 
 /**
  * Who is in the workspace, and which of them run it.
  *
- * Membership is what board access is derived from, so this list is the base of
- * the access-control surface and is deliberately visible rather than buried
- * behind an admin screen. Who may *change* it is the narrower question the
- * permissions dialog answers.
+ * Only its own members are listed. Showing every account in the app turned this
+ * into a directory of the whole company that happened to have tick boxes, which
+ * made "who is in this workspace" the hard question to answer on the screen that
+ * exists to answer it. People come in through an invite link instead — the list
+ * below is a record, not a picker.
  */
 export function WorkspaceMembers({
   workspace,
-  teamMembers,
   currentUserId,
   canManage,
 }: {
   workspace: Workspace;
-  teamMembers: UserSummary[];
   currentUserId: string;
   canManage: boolean;
 }) {
@@ -38,23 +35,15 @@ export function WorkspaceMembers({
   const [isRenameOpen, setRenameOpen] = useState(false);
   const [isPermissionsOpen, setPermissionsOpen] = useState(false);
 
-  const memberIds = new Set(workspace.members.map((member) => member.id));
   const managerIds = new Set([workspace.createdById, ...workspace.managerIds]);
 
-  function toggle(userId: string) {
-    if (userId === currentUserId) {
-      toast.error("You cannot remove yourself from a workspace you are in.");
-      return;
-    }
-
-    const next = memberIds.has(userId)
-      ? [...memberIds].filter((id) => id !== userId)
-      : [...memberIds, userId];
-
+  function remove(userId: string) {
     startTransition(async () => {
       const result = await setWorkspaceMembersAction({
         id: workspace.id,
-        memberIds: next,
+        memberIds: workspace.members
+          .map((member) => member.id)
+          .filter((id) => id !== userId),
       });
 
       if (!result.ok) {
@@ -101,59 +90,63 @@ export function WorkspaceMembers({
         </div>
 
         <ul className="space-y-0.5">
-          {teamMembers.map((member) => {
-            const isMember = memberIds.has(member.id);
+          {workspace.members.map((member) => {
             const isSelf = member.id === currentUserId;
 
             return (
-              <li key={member.id}>
-                <button
-                  type="button"
-                  onClick={() => toggle(member.id)}
-                  disabled={isPending || isSelf || !canManage}
-                  aria-pressed={isMember}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors",
-                    isSelf || !canManage
-                      ? "cursor-default"
-                      : "hover:bg-accent/60 disabled:opacity-60",
-                  )}
-                >
-                  <AssigneeAvatar user={member} className="size-6" />
+              <li
+                key={member.id}
+                className="group/member flex items-center gap-2.5 rounded-lg px-2 py-1.5"
+              >
+                <AssigneeAvatar user={member} className="size-6" />
 
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">
-                      {member.name}
-                      {isSelf ? (
-                        <span className="text-muted-foreground"> (you)</span>
-                      ) : null}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {member.email}
-                    </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">
+                    {member.name}
+                    {isSelf ? (
+                      <span className="text-muted-foreground"> (you)</span>
+                    ) : null}
                   </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {member.email}
+                  </span>
+                </span>
 
-                  {isMember && managerIds.has(member.id) ? (
-                    <span className="shrink-0 rounded-md bg-accent px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
-                      Manager
-                    </span>
-                  ) : null}
+                {managerIds.has(member.id) ? (
+                  <span className="shrink-0 rounded-md bg-accent px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+                    Manager
+                  </span>
+                ) : null}
 
-                  {isMember ? (
-                    <CheckIcon
-                      className="size-4 shrink-0 text-foreground"
-                      aria-hidden="true"
-                    />
-                  ) : canManage ? (
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      Add
-                    </span>
-                  ) : null}
-                </button>
+                {/*
+                  Removal is its own button rather than the row itself. When the
+                  list was a picker, clicking a row toggled membership; now that
+                  every row is already a member, the only thing a click could do
+                  is remove somebody, and that is not a thing to trip over.
+                */}
+                {canManage && !isSelf ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${member.name} from ${workspace.name}`}
+                    disabled={isPending}
+                    onClick={() => remove(member.id)}
+                    className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/member:opacity-100 focus-visible:opacity-100"
+                  >
+                    <XIcon className="size-3.5" aria-hidden="true" />
+                  </Button>
+                ) : null}
               </li>
             );
           })}
         </ul>
+
+        {canManage ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Add someone with an invite link below. Removing a member also drops
+            any workspace management they had.
+          </p>
+        ) : null}
       </section>
 
       {canManage ? (

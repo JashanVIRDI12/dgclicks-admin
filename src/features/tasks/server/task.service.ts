@@ -2,6 +2,7 @@ import "server-only";
 
 import { Types } from "mongoose";
 
+import { toUserSummary } from "@/features/auth/server/serialize";
 import { UserModel } from "@/features/auth/server/user.model";
 import { TASK_SEARCH_LIMIT, type TaskPriority } from "@/features/tasks/constants";
 import {
@@ -119,6 +120,9 @@ export async function getTaskDetail(id: string): Promise<TaskDetail> {
 
   return {
     ...toTask(doc),
+    assignedBy: toUserSummary(
+      doc.assignedBy as Parameters<typeof toUserSummary>[0],
+    ),
     timeEntries: (doc.timeEntries ?? [])
       .map((entry) => toTimeEntry(entry as Parameters<typeof toTimeEntry>[0]))
       .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt)),
@@ -262,6 +266,7 @@ export async function createTask(
     position: positionAfter(last?.position ?? null),
     priority: input.priority ?? "none",
     assignee: input.assigneeId ? new Types.ObjectId(input.assigneeId) : null,
+    assignedBy: input.assigneeId ? new Types.ObjectId(createdById) : null,
     startDate: input.startDate ?? null,
     dueDate: input.dueDate ?? null,
     labels,
@@ -320,6 +325,7 @@ export async function updateTask(
   id: string,
   boardId: string,
   patch: TaskPatch,
+  actorId: string,
 ): Promise<Task> {
   await connectToDatabase();
 
@@ -356,6 +362,14 @@ export async function updateTask(
 
     update.assignee = patch.assigneeId
       ? new Types.ObjectId(patch.assigneeId)
+      : null;
+
+    // Written from the same branch as the assignee so the two cannot disagree:
+    // whoever made this change is who assigned it, and unassigning leaves nobody
+    // to have assigned it. Recorded here rather than read back out of the
+    // activity feed, which is paged and prunable.
+    update.assignedBy = patch.assigneeId
+      ? new Types.ObjectId(actorId)
       : null;
   }
 

@@ -6,7 +6,6 @@ import { FadeIn } from "@/components/common/fade-in";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { getSessionRole, requireSession } from "@/features/auth/server/session";
-import { listTeamMembers } from "@/features/auth/server/users.service";
 import { WorkspaceInvites } from "@/features/tasks/components/workspace-invites";
 import { WorkspaceMembers } from "@/features/tasks/components/workspace-members";
 import { WorkspaceDangerZone } from "@/features/tasks/components/workspace-danger-zone";
@@ -33,9 +32,6 @@ export default async function SettingsPage() {
 
   const isAdmin = getSessionRole(session) === "admin";
   const canManage = canManageWorkspace(active, session.user.id, isAdmin);
-  // Only a manager can add someone, so only a manager is shown the directory of
-  // people to add. Everyone else sees the workspace as it stands.
-  const teamMembers = canManage ? await listTeamMembers() : active.members;
   // A live link carries its own token, so it is shown only to the people who
   // could have created it.
   const invites = canManage
@@ -52,7 +48,6 @@ export default async function SettingsPage() {
       <FadeIn className="space-y-4">
         <WorkspaceMembers
           workspace={active}
-          teamMembers={teamMembers}
           currentUserId={session.user.id}
           canManage={canManage}
         />
