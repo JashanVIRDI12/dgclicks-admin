@@ -217,6 +217,76 @@
     --label-teal: oklch(0.74 0.1 190);
 }
 
+/**
+ * Appearance: one hue and one chroma drive every accent in the product.
+ *
+ * `--accent-h` and `--accent-c` are the only things a palette sets. Everything
+ * accented — buttons, rings, the sidebar's active state, focus outlines, the
+ * selection highlight — is derived from them here, with **lightness fixed by the
+ * mode rather than by the palette**.
+ *
+ * That inversion is the whole design. It means a palette cannot express a colour
+ * that fails contrast, because it never gets to choose the one channel that
+ * decides contrast. Light mode always lands near L=0.49, dark near L=0.62; both
+ * clear 4.5:1 against their own foreground at every hue on the wheel. Adding a
+ * ninth palette, or letting someone drag a hue slider to an arbitrary angle, is
+ * therefore safe by construction rather than by review.
+ *
+ * `data-palette` is written to <html> by the appearance provider; the values
+ * below have to stay in step with `features/appearance/palettes.ts`.
+ */
+:root {
+    --accent-h: 272;
+    --accent-c: 0.2;
+
+    /* Multiplies the decorative wash. Set to 0 by "None" and by effects-off,
+       which is why gradients can be switched off without deleting any rule. */
+    --gradient-strength: 0.6;
+    /* Scales the padding of list rows, cards and section gaps. */
+    --density-scale: 1;
+}
+
+[data-palette="midnight"]   { --accent-h: 272; --accent-c: 0.2; }
+[data-palette="aurora"]     { --accent-h: 196; --accent-c: 0.14; }
+[data-palette="electric"]   { --accent-h: 250; --accent-c: 0.19; }
+[data-palette="cyber"]      { --accent-h: 305; --accent-c: 0.19; }
+[data-palette="emerald"]    { --accent-h: 162; --accent-c: 0.13; }
+[data-palette="sunset"]     { --accent-h: 42;  --accent-c: 0.15; }
+[data-palette="minimal"]    { --accent-h: 240; --accent-c: 0.04; }
+[data-palette="monochrome"] { --accent-h: 0;   --accent-c: 0; }
+
+:root {
+    --primary: oklch(0.49 var(--accent-c) var(--accent-h));
+    --brand: oklch(0.48 calc(var(--accent-c) * 0.95) var(--accent-h));
+    --ring: oklch(0.55 calc(var(--accent-c) * 0.95) var(--accent-h));
+    --sidebar-primary: oklch(0.49 var(--accent-c) var(--accent-h));
+    --sidebar-ring: oklch(0.55 calc(var(--accent-c) * 0.95) var(--accent-h));
+}
+
+.dark {
+    /* Lighter and slightly less saturated: the same chroma that reads as rich
+       on white reads as neon on near-black. */
+    --primary: oklch(0.62 calc(var(--accent-c) * 0.92) var(--accent-h));
+    --brand: oklch(0.74 calc(var(--accent-c) * 0.7) var(--accent-h));
+    --ring: oklch(0.62 calc(var(--accent-c) * 0.9) var(--accent-h));
+    --sidebar-primary: oklch(0.62 calc(var(--accent-c) * 0.92) var(--accent-h));
+    --sidebar-ring: oklch(0.62 calc(var(--accent-c) * 0.9) var(--accent-h));
+}
+
+/* Density. Only spacing moves — type size is not a preference, it is a
+   legibility floor, and shrinking it is how "compact" becomes "unreadable". */
+[data-density="compact"]    { --density-scale: 0.78; }
+[data-density="comfortable"]{ --density-scale: 1; }
+[data-density="spacious"]   { --density-scale: 1.25; }
+
+[data-gradient="none"]   { --gradient-strength: 0; }
+[data-gradient="subtle"] { --gradient-strength: 0.6; }
+[data-gradient="vivid"]  { --gradient-strength: 1.4; }
+
+/* The decorative layer, off in one place. Functional transitions are untouched:
+   this hides ornament, it does not freeze the interface. */
+[data-effects="off"] { --gradient-strength: 0; }
+
 @layer base {
     * {
         @apply border-border outline-ring/50;
@@ -244,6 +314,37 @@
 
     ::selection {
         @apply bg-brand/25;
+    }
+
+    /**
+     * The page's own atmosphere.
+     *
+     * A single accent-tinted wash anchored top-left, at a strength the reader
+     * controls. Painted on `body::before` rather than as a background image so
+     * it cannot be scrolled away from or repeated, and so switching it off is
+     * one custom property rather than a class on every page.
+     *
+     * `oklch(from …)` keeps it locked to whatever accent is active — change the
+     * palette and the atmosphere follows without a second set of values.
+     */
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        opacity: var(--gradient-strength);
+        background:
+            radial-gradient(
+                60rem 40rem at 8% -10%,
+                oklch(from var(--brand) l c h / 12%),
+                transparent 70%
+            ),
+            radial-gradient(
+                50rem 35rem at 100% 0%,
+                oklch(from var(--brand) l c h / 7%),
+                transparent 65%
+            );
     }
 
     /* Respect a user's reduced-motion preference across the whole app. */
@@ -411,5 +512,157 @@
         100% {
             transform: translateX(420%);
         }
+    }
+}
+
+/**
+ * Surface treatments.
+ *
+ * `card-surface` is the one class every panel, card and section wears. What it
+ * resolves to depends on `data-surface`, so a reader who wants borders instead
+ * of shadows — or frosted glass instead of either — changes one preference
+ * rather than a theme.
+ *
+ * Glass is opt-in and stays conservative: a heavy blur behind every card costs
+ * a compositor layer each and turns a board of forty of them into a scroll
+ * stutter, so the blur is small and the fallback is a solid tint.
+ */
+@layer components {
+    .card-surface {
+        background-color: var(--card);
+        border-radius: var(--radius-xl);
+        transition:
+            box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+            border-color 180ms ease,
+            transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /**
+     * The three treatments have to be told apart at a glance, or the setting
+     * is a placebo. They differ on every channel at once — border, shadow,
+     * fill and radius — rather than nudging one of them:
+     *
+     *   flat      hairline border, no shadow, tighter radius, flush fill
+     *   elevated  no border, real cast shadow, softer radius, raised fill
+     *   glass     translucent fill, blur, bright top edge
+     */
+    [data-surface="flat"] .card-surface {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: none;
+        /* Plain `--card`. An earlier version mixed it toward `--background` to
+           sit the card flush with the page; in `oklch` that interpolation
+           drifted the near-neutral hue far enough to read as a warm tint. Two
+           greys a few percent apart are not worth a colour operation. */
+        background-color: var(--card);
+    }
+
+    [data-surface="elevated"] .card-surface {
+        border: 1px solid transparent;
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--elevation-lift);
+    }
+
+    /* Compound, not descendant. `.dark` and `data-surface` are both written to
+       <html> — the same element — so `.dark [data-surface]` asks for a
+       descendant that does not exist and never matched. */
+    .dark[data-surface="elevated"] .card-surface {
+        /* Shadows barely register on near-black, so raise the fill instead. */
+        background-color: oklch(from var(--card) calc(l + 0.022) c h);
+    }
+
+    [data-surface="glass"] .card-surface {
+        border: 1px solid oklch(from var(--foreground) l c h / 10%);
+        border-radius: var(--radius-2xl);
+        background-color: oklch(from var(--card) l c h / 62%);
+        backdrop-filter: blur(14px) saturate(160%);
+        box-shadow:
+            inset 0 1px 0 oklch(from var(--foreground) l c h / 8%),
+            var(--elevation-lift);
+    }
+
+    /* Hover physics. Lift and settle on the same curve the board's drag uses,
+       so a card picked up by the pointer and one picked up by dnd-kit move like
+       the same object. */
+    .card-interactive:hover {
+        box-shadow: var(--elevation-lift);
+        transform: translateY(-1px);
+    }
+
+    .card-interactive:active {
+        transform: translateY(0);
+        box-shadow: var(--elevation-soft);
+    }
+
+    /**
+     * Density-aware spacing.
+     *
+     * Multiplied by `--density-scale` rather than swapped between three sets of
+     * utility classes, so a component opts in once and follows the preference
+     * forever instead of branching on it.
+     */
+    .density-row {
+        padding-block: calc(0.375rem * var(--density-scale));
+        padding-inline: calc(0.5rem * var(--density-scale));
+    }
+
+    .density-stack > * + * {
+        margin-block-start: calc(1.5rem * var(--density-scale));
+    }
+
+    .density-pad {
+        padding: calc(1rem * var(--density-scale));
+    }
+}
+
+/**
+ * Priority as an edge, not a fill.
+ *
+ * A card washed red or orange fights two things at once: the accent palette the
+ * reader chose, and the contrast of its own text — a title on a saturated fill
+ * has to change colour to stay legible, and then "urgent" and "done" start
+ * disagreeing about what the card looks like. A 3px edge in the priority colour
+ * is unmissable down a column, survives all three surface treatments, and leaves
+ * the card's own surface to the theme.
+ *
+ * The bar is drawn rather than set as `border-left`, because a border would
+ * shift the card's content box and make the columns fail to line up depending on
+ * whether a card happened to have a priority.
+ */
+@layer components {
+    /**
+     * A wash across the card rather than a bar down its edge.
+     *
+     * `background-image` layers over whatever `background-color` the current
+     * surface treatment set, so one rule works across flat, elevated and glass
+     * without any of them knowing about priority.
+     *
+     * It fades out by 60% so the right-hand side of the card — where the
+     * assignee, dates and counts sit — stays on a neutral fill and keeps its
+     * contrast. Strength climbs with urgency, which is what makes a column
+     * scannable: the eye sorts by intensity before it reads a single word.
+     */
+    .priority-tint {
+        background-image: linear-gradient(
+            105deg,
+            color-mix(
+                in oklch,
+                var(--priority-accent) var(--priority-strength),
+                transparent
+            ),
+            transparent 60%
+        );
+    }
+
+    .priority-tint[data-priority="urgent"] { --priority-strength: 22%; }
+    .priority-tint[data-priority="high"] { --priority-strength: 16%; }
+    .priority-tint[data-priority="medium"] { --priority-strength: 11%; }
+    .priority-tint[data-priority="low"] { --priority-strength: 7%; }
+
+    /* Finished work stops shouting. The priority icon still states it, so
+       nothing is lost — a completed card just has no reason to compete with
+       live ones for attention. */
+    .priority-tint[data-complete="true"] {
+        background-image: none;
     }
 }

@@ -92,7 +92,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl bg-card p-4 shadow-soft", className)}>
+    <div className={cn("card-surface p-4", className)}>
       {children}
     </div>
   );

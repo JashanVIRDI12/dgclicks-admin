@@ -46,7 +46,7 @@ export function HierarchyDiagram() {
       {LEVELS.map((level, index) => (
         <li
           key={level.name}
-          className="flex items-center gap-3 rounded-xl bg-card p-3 shadow-soft"
+          className="card-surface flex items-center gap-3 p-3"
           style={{ marginLeft: `${index * 1.25}rem` }}
         >
           <span

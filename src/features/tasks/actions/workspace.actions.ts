@@ -38,14 +38,22 @@ import { objectId } from "@/lib/validation";
  * Everything the switcher, sidebar and index pages read is workspace-scoped, so
  * a workspace change invalidates all of them.
  */
+/**
+ * Everything under the app shell, layout included.
+ *
+ * `revalidatePath("/dashboard")` and friends invalidate only the *page* at that
+ * segment. The sidebar — the workspace switcher and its list of boards — is
+ * rendered by `app/(app)/layout.tsx`, so naming the pages one by one refreshed
+ * the body of each screen while leaving the navigation showing the workspace
+ * you just switched away from. It took a manual reload to catch up.
+ *
+ * The `"layout"` form invalidates the layout at that segment, every nested
+ * layout beneath it, and every page under those. That is heavier than seven
+ * targeted calls, and correct: which workspace is active changes what *every*
+ * route in the app resolves to, not just what seven of them display.
+ */
 function revalidateWorkspaceScope(): void {
-  revalidatePath("/dashboard");
-  revalidatePath("/boards");
-  revalidatePath("/my-tasks");
-  revalidatePath("/calendar");
-  revalidatePath("/reports");
-  revalidatePath("/settings");
-  revalidatePath("/activity");
+  revalidatePath("/", "layout");
 }
 
 export const createWorkspaceAction = createAction({

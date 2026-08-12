@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { siteConfig } from "@/config/site";
+import { APPEARANCE_INIT_SCRIPT } from "@/features/appearance/appearance-provider";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/providers";
 
@@ -43,6 +44,16 @@ export default function RootLayout({
     // `suppressHydrationWarning` is required by next-themes: it writes the
     // theme class onto <html> before React hydrates.
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+          Applies the saved accent, density and surface before first paint, so
+          the page never flashes the default indigo on its way to the reader's
+          own theme. Same approach next-themes takes for light/dark.
+        */}
+        <script
+          dangerouslySetInnerHTML={{ __html: APPEARANCE_INIT_SCRIPT }}
+        />
+      </head>
       <body
         className={cn(
           "min-h-svh font-sans antialiased",

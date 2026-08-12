@@ -22,7 +22,7 @@ function BoardCard({ board }: { board: BoardSummary }) {
   return (
     <Link
       href={`/boards/${board.id}` as Route}
-      className="group flex flex-col gap-4 rounded-2xl bg-card p-5 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift focus-visible:-translate-y-0.5 focus-visible:shadow-lift"
+      className="group card-surface card-interactive flex flex-col gap-4 p-5 focus-visible:-translate-y-px focus-visible:shadow-lift"
     >
       <div className="flex items-start gap-3">
         <BoardIcon icon={board.icon} color={board.color} />

@@ -4,15 +4,19 @@ import {
   FileIcon,
   FileTextIcon,
   ImageIcon,
-  Loader2Icon,
   PaperclipIcon,
   Trash2Icon,
   type LucideIcon,
 } from "lucide-react";
 import { useRef } from "react";
 
+import { Spinner } from "@/components/common/spinner";
 import { Button } from "@/components/ui/button";
 import type { UserSummary } from "@/features/auth/types";
+import {
+  DrawerSection,
+  SectionEmpty,
+} from "@/features/tasks/components/drawer/section";
 import { LIMITS } from "@/features/tasks/constants";
 import {
   useDeleteAttachment,
@@ -64,48 +68,47 @@ export function AttachmentSection({
   const isFull = attachments.length >= LIMITS.attachmentsPerTask;
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium">Attachments</h3>
-        {attachments.length > 0 ? (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {attachments.length}
-          </span>
-        ) : null}
+    <DrawerSection
+      icon={PaperclipIcon}
+      title="Attachments"
+      meta={attachments.length > 0 ? attachments.length : undefined}
+      action={
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-busy={upload.isPending}
+            disabled={upload.isPending || isFull}
+            onClick={() => inputRef.current?.click()}
+            className="h-7 text-muted-foreground"
+          >
+            {upload.isPending ? (
+              <Spinner />
+            ) : (
+              <PaperclipIcon className="size-3.5" aria-hidden="true" />
+            )}
+            {upload.isPending ? "Uploading…" : "Attach"}
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={upload.isPending || isFull}
-          onClick={() => inputRef.current?.click()}
-          className="ml-auto h-7 text-muted-foreground"
-        >
-          {upload.isPending ? (
-            <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />
-          ) : (
-            <PaperclipIcon className="size-3.5" aria-hidden="true" />
-          )}
-          {upload.isPending ? "Uploading…" : "Attach"}
-        </Button>
+          <input
+            ref={inputRef}
+            type="file"
+            className="sr-only"
+            aria-label="Attach a file"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
 
-        <input
-          ref={inputRef}
-          type="file"
-          className="sr-only"
-          aria-label="Attach a file"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
+              if (file) {
+                upload.mutate(file);
+              }
 
-            if (file) {
-              upload.mutate(file);
-            }
-
-            // Reset so choosing the same file twice in a row still fires.
-            event.target.value = "";
-          }}
-        />
-      </div>
-
+              // Reset so choosing the same file twice in a row still fires.
+              event.target.value = "";
+            }}
+          />
+        </>
+      }
+    >
       {attachments.length > 0 ? (
         <ul className="space-y-1">
           {attachments.map((attachment) => {
@@ -141,10 +144,15 @@ export function AttachmentSection({
                     variant="ghost"
                     size="icon"
                     aria-label={`Remove ${attachment.filename}`}
+                    disabled={remove.isPending}
                     onClick={() => remove.mutate(attachment.id)}
                     className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/file:opacity-100 focus-visible:opacity-100"
                   >
-                    <Trash2Icon className="size-3.5" />
+                    {remove.isPending && remove.variables === attachment.id ? (
+                      <Spinner className="size-3" />
+                    ) : (
+                      <Trash2Icon className="size-3.5" />
+                    )}
                   </Button>
                 ) : null}
               </li>
@@ -152,11 +160,11 @@ export function AttachmentSection({
           })}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground">
+        <SectionEmpty>
           Private to this workspace. Up to{" "}
           {Math.round(LIMITS.attachmentBytes / 1024 / 1024)} MB each.
-        </p>
+        </SectionEmpty>
       )}
-    </section>
+    </DrawerSection>
   );
 }

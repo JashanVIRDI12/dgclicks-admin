@@ -27,6 +27,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { MessageContent } from "@/features/assistant/components/message-content";
 import { ASSISTANT_STARTERS } from "@/features/assistant/prompts";
 import type {
   AssistantMessageView,
@@ -530,15 +531,20 @@ function MessageBubble({
           )}
         </div>
 
+        {/*
+          `whitespace-pre-wrap` is gone: MessageContent owns the line breaks now,
+          and keeping both meant every blank line in the model's output was
+          rendered twice — once as a real gap, once as the paragraph spacing.
+        */}
         <div
           className={cn(
-            "max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+            "max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
             isAssistant
               ? "rounded-tl-md bg-muted/70 text-foreground"
               : "rounded-tr-md bg-primary text-primary-foreground",
           )}
         >
-          {message.content}
+          <MessageContent content={message.content} />
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppearanceProvider } from "@/features/appearance/appearance-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 
@@ -19,6 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
+      <AppearanceProvider />
       <QueryProvider>
         <TooltipProvider delayDuration={300}>
           {children}

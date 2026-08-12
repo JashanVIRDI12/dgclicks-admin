@@ -1,4 +1,4 @@
-import { KeyRoundIcon } from "lucide-react";
+import { KeyRoundIcon, PaletteIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -56,18 +56,27 @@ export default async function SettingsPage() {
           <WorkspaceInvites workspaceId={active.id} invites={invites} />
         ) : null}
 
-        <section className="rounded-2xl bg-card p-4 shadow-soft">
+        <section className="card-surface p-4">
           <h2 className="mb-1 text-sm font-medium">Account</h2>
           <p className="mb-3 text-sm text-muted-foreground">
             Signed in as {session.user.email}.
           </p>
 
-          <Button asChild variant="outline" size="sm">
-            <Link href="/settings/security">
-              <KeyRoundIcon className="size-4" aria-hidden="true" />
-              Password and sessions
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/settings/security">
+                <KeyRoundIcon className="size-4" aria-hidden="true" />
+                Password and sessions
+              </Link>
+            </Button>
+
+            <Button asChild variant="outline" size="sm">
+              <Link href="/settings/appearance">
+                <PaletteIcon className="size-4" aria-hidden="true" />
+                Theme and appearance
+              </Link>
+            </Button>
+          </div>
         </section>
 
         {canManage ? <WorkspaceDangerZone workspace={active} /> : null}

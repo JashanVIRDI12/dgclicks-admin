@@ -26,9 +26,41 @@ import { env } from "@/lib/env";
  * the same database by construction.
  */
 function resolveConnectionString(): { uri: string; dbName: string } {
-  const url = new URL(env.MONGODB_URI);
-  const uriDbName = url.pathname.replace(/^\//, "");
-  const dbName = env.MONGODB_DB_NAME ?? uriDbName;
+  // Parsed by hand rather than with `new URL()`. A seed-list connection string
+  // — `mongodb://a:27017,b:27017,c:27017/?replicaSet=rs0`, which is what Atlas
+  // hands out for its non-SRV form and what every self-hosted replica set uses
+  // — is a valid MongoDB URI but not a valid WHATWG URL: the commas in the host
+  // list make `new URL()` throw. `env.ts` accepts any `mongodb…` string, so
+  // that combination crashed the process at import with a bare "Invalid URL"
+  // and a stack pointing at the auth layer.
+  const schemeEnd = env.MONGODB_URI.indexOf("://");
+
+  if (schemeEnd === -1) {
+    throw new Error(
+      "MONGODB_URI must start with mongodb:// or mongodb+srv://.",
+    );
+  }
+
+  const scheme = env.MONGODB_URI.slice(0, schemeEnd + 3);
+  const rest = env.MONGODB_URI.slice(schemeEnd + 3);
+
+  // A password may legally contain `/` and `?` once percent-encoded, but never
+  // an unescaped `@` — so the authority ends at the *last* one.
+  const credentialsEnd = rest.lastIndexOf("@");
+  const credentials =
+    credentialsEnd === -1 ? "" : rest.slice(0, credentialsEnd + 1);
+  const authority = rest.slice(credentialsEnd + 1);
+
+  const queryStart = authority.indexOf("?");
+  const query = queryStart === -1 ? "" : authority.slice(queryStart);
+  const hostsAndPath =
+    queryStart === -1 ? authority : authority.slice(0, queryStart);
+
+  const pathStart = hostsAndPath.indexOf("/");
+  const hosts = pathStart === -1 ? hostsAndPath : hostsAndPath.slice(0, pathStart);
+  const uriDbName = pathStart === -1 ? "" : hostsAndPath.slice(pathStart + 1);
+
+  const dbName = env.MONGODB_DB_NAME ?? (uriDbName || undefined);
 
   if (!dbName) {
     throw new Error(
@@ -36,8 +68,7 @@ function resolveConnectionString(): { uri: string; dbName: string } {
     );
   }
 
-  url.pathname = `/${dbName}`;
-  return { uri: url.toString(), dbName };
+  return { uri: `${scheme}${credentials}${hosts}/${dbName}${query}`, dbName };
 }
 
 const { uri, dbName } = resolveConnectionString();

@@ -103,9 +103,31 @@ export function useBoard(boardId: string, initialData: BoardSnapshot) {
     queryKey: boardKey(boardId),
     queryFn: () => fetchBoard(boardId),
     initialData,
-    // The server component already handed us fresh data; refetching on mount
-    // would throw the board away and rebuild it for nothing.
-    staleTime: 30_000,
+    /**
+     * Short enough that a colleague's card shows up on its own, long enough
+     * that it is not refetching under your hands while you drag.
+     */
+    staleTime: 4_000,
+    /**
+     * The board is the one screen several people work on at the same time, so
+     * it polls, and it polls faster than anything else in the app.
+     *
+     * Five seconds rather than two on purpose. A person needs roughly a second
+     * just to register that a card appeared, so the felt difference between the
+     * two is close to nothing — while two seconds is two and a half times the
+     * requests, and each one is a full board read. Five keeps "someone added a
+     * task" resolving itself well before anybody reaches for reload.
+     *
+     * Optimistic writes are unaffected — they land instantly and this only
+     * confirms them.
+     */
+    refetchInterval: 5_000,
+    /**
+     * Left at the default: a background tab stops polling entirely. A board
+     * left open overnight should cost nothing, and the focus refetch already
+     * catches it up the moment anyone looks.
+     */
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -542,6 +564,7 @@ export function useCreateTask(boardId: string) {
       estimateMinutes?: number | null;
       recurrence?: RecurrenceInput;
       subtasks?: string[];
+      checklist?: string[];
     }) => {
       const result = await createTaskAction({ ...input, boardId });
 

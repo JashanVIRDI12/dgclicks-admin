@@ -1,9 +1,12 @@
+import { HistoryIcon } from "lucide-react";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ACTIVITY_ENTITY_LABELS,
   type ActivityAction,
 } from "@/features/activity/constants";
 import type { ActivityEntry } from "@/features/activity/types";
+import { DrawerSection } from "@/features/tasks/components/drawer/section";
 import { initials } from "@/features/tasks/components/task-meta";
 
 /**
@@ -94,9 +97,7 @@ export function ActivitySection({
   }
 
   return (
-    <section className="space-y-3">
-      <h3 className="text-sm font-medium">History</h3>
-
+    <DrawerSection icon={HistoryIcon} title="History">
       <ul className="space-y-2.5">
         {entries.map((entry) => (
           <li key={entry.id} className="flex items-baseline gap-2.5 text-xs">
@@ -122,6 +123,6 @@ export function ActivitySection({
           </li>
         ))}
       </ul>
-    </section>
+    </DrawerSection>
   );
 }

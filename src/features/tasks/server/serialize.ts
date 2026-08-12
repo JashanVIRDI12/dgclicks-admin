@@ -216,6 +216,7 @@ type TaskSource = {
   position: number;
   priority: string;
   assignee?: unknown;
+  assignedBy?: unknown;
   startDate?: Date | null;
   dueDate?: Date | null;
   labels?: unknown[];
@@ -243,6 +244,9 @@ export function toTask(doc: TaskSource): Task {
     position: doc.position,
     priority: doc.priority as TaskPriority,
     assignee: toUserSummary(doc.assignee as Parameters<typeof toUserSummary>[0]),
+    assignedBy: toUserSummary(
+      doc.assignedBy as Parameters<typeof toUserSummary>[0],
+    ),
     startDate: toIso(doc.startDate),
     dueDate: toIso(doc.dueDate),
     labels: (doc.labels ?? [])

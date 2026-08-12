@@ -17,6 +17,7 @@ import {
   type TaskDoc,
 } from "@/features/tasks/server/models";
 import {
+  POSITION_STEP,
   positionAfter,
   resolveDropPosition,
   sequentialPositions,
@@ -235,6 +236,8 @@ export async function createTask(
     recurrence?: RecurrenceInput;
     /** Titles to spawn as children of the new task. */
     subtasks?: string[];
+    /** Checklist steps, embedded on the task rather than created separately. */
+    checklist?: string[];
   },
   createdById: string,
 ): Promise<Task> {
@@ -267,6 +270,14 @@ export async function createTask(
     priority: input.priority ?? "none",
     assignee: input.assigneeId ? new Types.ObjectId(input.assigneeId) : null,
     assignedBy: input.assigneeId ? new Types.ObjectId(createdById) : null,
+    // Embedded, so this is part of the same insert rather than a second write.
+    // Positions are seeded outright: a task being created has no existing steps
+    // to sort against.
+    checklist: (input.checklist ?? []).map((title, index) => ({
+      title,
+      done: false,
+      position: (index + 1) * POSITION_STEP,
+    })),
     startDate: input.startDate ?? null,
     dueDate: input.dueDate ?? null,
     labels,

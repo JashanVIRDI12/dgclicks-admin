@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  CheckIcon,
-  PencilIcon,
-  PlusIcon,
-  TagIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { CheckIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -137,10 +131,7 @@ export function LabelPicker({
               ))}
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <TagIcon className="size-3.5" aria-hidden="true" />
-              Add labels
-            </span>
+            <span className="text-muted-foreground">Add labels</span>
           )}
         </Button>
       </PopoverTrigger>

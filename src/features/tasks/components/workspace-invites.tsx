@@ -84,7 +84,7 @@ export function WorkspaceInvites({
   }
 
   return (
-    <section className="rounded-2xl bg-card p-4 shadow-soft">
+    <section className="card-surface p-4">
       <h2 className="mb-1 text-sm font-medium">Invite people</h2>
       <p className="mb-3 text-sm text-muted-foreground">
         Share a link and whoever opens it can create an account and join this

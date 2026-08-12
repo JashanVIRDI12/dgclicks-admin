@@ -49,7 +49,7 @@ export function WorkspaceDangerZone({
   }
 
   return (
-    <section className="rounded-2xl border border-destructive/20 bg-card p-4 shadow-soft">
+    <section className="card-surface border-destructive/25 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-medium">Delete workspace</h2>

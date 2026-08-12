@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, ChevronsUpDownIcon, PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -36,6 +37,7 @@ export function WorkspaceSwitcher({
   isCollapsed: boolean;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
   const [isCreateOpen, setCreateOpen] = useState(false);
 
@@ -54,6 +56,12 @@ export function WorkspaceSwitcher({
         return;
       }
 
+      // Everything TanStack is holding was fetched while a different workspace
+      // was active — board snapshots, task drawers, palette search results.
+      // None of it is necessarily wrong, but "necessarily" is doing too much
+      // work there, and a switch is rare enough that refetching from scratch
+      // costs nothing worth protecting.
+      queryClient.clear();
       router.refresh();
     });
   }

@@ -94,6 +94,27 @@ const subtaskTitlesSchema = z
   .max(SUBTASK_CREATE_LIMIT, `At most ${SUBTASK_CREATE_LIMIT} subtasks.`);
 
 /**
+ * Checklist steps supplied with a new task.
+ *
+ * Unlike subtasks these are embedded on the task document, so there is nothing
+ * to create separately — they are written as part of the same insert. Bounded
+ * by the same limits the drawer enforces, so a list built here and a list built
+ * afterwards obey one rule.
+ */
+const checklistTitlesSchema = z
+  .array(
+    z
+      .string()
+      .trim()
+      .min(1, "Describe the step.")
+      .max(
+        LIMITS.checklistItem,
+        `Each step must be at most ${LIMITS.checklistItem} characters.`,
+      ),
+  )
+  .max(LIMITS.checklistItems, `At most ${LIMITS.checklistItems} steps.`);
+
+/**
  * Creating only requires a title and a home. Everything else is set afterwards
  * from the drawer, which is what keeps quick-create to one keystroke and one
  * field.
@@ -109,6 +130,7 @@ export const createTaskSchema = taskFieldsSchema
     parentId: objectId.optional(),
     recurrence: recurrenceSchema.optional(),
     subtasks: subtaskTitlesSchema.optional(),
+    checklist: checklistTitlesSchema.optional(),
   })
   .superRefine((task, context) => {
     if (task.startDate && task.dueDate && task.dueDate < task.startDate) {
@@ -153,6 +175,7 @@ export const createTaskFormSchema = z
       .max(BOARD_LABEL_LIMIT, `At most ${BOARD_LABEL_LIMIT} labels.`),
     recurrenceFrequency: z.enum(RECURRENCE_FREQUENCIES).nullable(),
     subtasks: subtaskTitlesSchema,
+    checklist: checklistTitlesSchema,
     estimateHours: z
       .number()
       .min(0.25, "Estimate at least 15 minutes.")

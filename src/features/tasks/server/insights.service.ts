@@ -27,6 +27,17 @@ export type DashboardData = {
   upcoming: Task[];
   assignedToMe: Task[];
   recentlyUpdated: Task[];
+  /**
+   * What this person finished, this week and last.
+   *
+   * Counts rather than lists, and scoped to them rather than the workspace:
+   * the dashboard's job is to tell an employee how their own week is going, and
+   * a team-wide throughput number on a personal screen is a metric about
+   * somebody else. Last week is carried purely so this week has something
+   * honest to be compared against — "7" means nothing on its own.
+   */
+  completedThisWeek: number;
+  completedLastWeek: number;
 };
 
 function toObjectIds(ids: readonly string[]): Types.ObjectId[] {
@@ -55,6 +66,8 @@ export async function getDashboardData(options: {
       upcoming: [],
       assignedToMe: [],
       recentlyUpdated: [],
+      completedThisWeek: 0,
+      completedLastWeek: 0,
     };
   }
 
@@ -63,10 +76,37 @@ export async function getDashboardData(options: {
   const live = { board: boards, parent: null, archivedAt: null };
   const open = { ...live, completedAt: null };
 
-  const [dueToday, overdue, upcoming, assignedToMe, recentlyUpdated] =
-    await Promise.all([
+  /**
+   * Open work that belongs to *this person*.
+   *
+   * The overdue, due-today and upcoming panels used to filter on boards alone,
+   * so a dashboard headed "1 thing needs your attention" was counting the whole
+   * workspace's late work — and contradicting the "Assigned to you" panel
+   * directly below it, which was the only one scoped correctly.
+   *
+   * A personal home screen has to mean one thing by "you" everywhere on it. The
+   * workspace-wide view of the same question is what Reports and the board
+   * filters are for.
+   */
+  const mine = { ...open, assignee: options.userId };
+
+  // Weeks run Monday to Monday. `addDays(now, -7)` would slide the boundary
+  // every day and make "this week" mean "the last seven days", which is a
+  // different — and much less motivating — number on a Tuesday morning.
+  const weekStart = startOfDay(addDays(now, -((now.getDay() + 6) % 7)));
+  const lastWeekStart = addDays(weekStart, -7);
+
+  const [
+    dueToday,
+    overdue,
+    upcoming,
+    assignedToMe,
+    recentlyUpdated,
+    completedThisWeek,
+    completedLastWeek,
+  ] = await Promise.all([
       TaskModel.find({
-        ...open,
+        ...mine,
         dueDate: { $gte: startOfDay(now), $lte: endOfDay(now) },
       })
         .populate(TASK_POPULATE)
@@ -74,14 +114,14 @@ export async function getDashboardData(options: {
         .limit(PANEL_LIMIT)
         .lean<TaskDoc[]>(),
 
-      TaskModel.find({ ...open, dueDate: { $lt: startOfDay(now) } })
+      TaskModel.find({ ...mine, dueDate: { $lt: startOfDay(now) } })
         .populate(TASK_POPULATE)
         .sort({ dueDate: 1 })
         .limit(PANEL_LIMIT)
         .lean<TaskDoc[]>(),
 
       TaskModel.find({
-        ...open,
+        ...mine,
         dueDate: {
           $gt: endOfDay(now),
           $lte: endOfDay(addDays(now, UPCOMING_DAYS)),
@@ -92,7 +132,7 @@ export async function getDashboardData(options: {
         .limit(PANEL_LIMIT)
         .lean<TaskDoc[]>(),
 
-      TaskModel.find({ ...open, assignee: options.userId })
+      TaskModel.find(mine)
         .populate(TASK_POPULATE)
         // Undated work sorts last: `dueDate: 1` puts nulls first in MongoDB, so
         // the presence of a date is the primary key.
@@ -100,12 +140,24 @@ export async function getDashboardData(options: {
         .limit(PANEL_LIMIT)
         .lean<TaskDoc[]>(),
 
-      TaskModel.find(live)
-        .populate(TASK_POPULATE)
-        .sort({ updatedAt: -1 })
-        .limit(PANEL_LIMIT)
-        .lean<TaskDoc[]>(),
-    ]);
+    TaskModel.find(live)
+      .populate(TASK_POPULATE)
+      .sort({ updatedAt: -1 })
+      .limit(PANEL_LIMIT)
+      .lean<TaskDoc[]>(),
+
+    TaskModel.countDocuments({
+      ...live,
+      assignee: options.userId,
+      completedAt: { $gte: weekStart },
+    }),
+
+    TaskModel.countDocuments({
+      ...live,
+      assignee: options.userId,
+      completedAt: { $gte: lastWeekStart, $lt: weekStart },
+    }),
+  ]);
 
   return {
     dueToday: dueToday.map(toTask),
@@ -113,6 +165,8 @@ export async function getDashboardData(options: {
     upcoming: upcoming.map(toTask),
     assignedToMe: sortUndatedLast(assignedToMe.map(toTask)),
     recentlyUpdated: recentlyUpdated.map(toTask),
+    completedThisWeek,
+    completedLastWeek,
   };
 }
 

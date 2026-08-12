@@ -113,6 +113,15 @@ export type Task = {
   position: number;
   priority: TaskPriority;
   assignee: UserSummary | null;
+  /**
+   * Who handed the task to its assignee. Null when nobody is assigned.
+   *
+   * On the card rather than only in the drawer, which costs one extra
+   * `populate` on the board read — accepted because Mongoose batches a
+   * single-ref populate into one `$in` query, so it is one more round trip per
+   * board fetch, not one per card.
+   */
+  assignedBy: UserSummary | null;
   startDate: string | null;
   dueDate: string | null;
   labels: Label[];

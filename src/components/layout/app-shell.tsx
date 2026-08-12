@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { LiveRefresh } from "@/components/common/live-refresh";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { AssistantPanel } from "@/features/assistant/components/assistant-panel";
@@ -88,6 +89,10 @@ export function AppShell({
           </main>
         </AppShellContent>
       </AssistantProvider>
+
+      {/* Mounted once for the whole app group, so every server-rendered page
+          inside the shell stays current without each one arranging it. */}
+      <LiveRefresh />
 
       <CommandPalette
         boards={boards}

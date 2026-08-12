@@ -50,12 +50,31 @@ export function TaskCard({
     task.commentCount > 0 ||
     task.attachmentCount > 0 ||
     task.recurrence !== null ||
-    task.assignee !== null;
+    task.assignee !== null ||
+    task.assignedBy !== null;
+
+  // `none` is a real priority meaning "not triaged", so it gets no edge — a
+  // colour for "no colour" would put four bars in a column where only three
+  // people have made a decision.
+  const hasPriority = task.priority !== "none";
 
   return (
     <article
+      data-priority={task.priority}
+      data-complete={isComplete}
+      style={
+        hasPriority
+          ? ({
+              "--priority-accent": `var(--priority-${task.priority})`,
+            } as React.CSSProperties)
+          : undefined
+      }
       className={cn(
-        "rounded-xl bg-card p-3 pr-8 shadow-soft transition-shadow duration-150",
+        "card-surface p-3 pr-8",
+        // Lift on hover, settle on press. Skipped for the drag overlay, which
+        // is already in the air and would otherwise stack two elevations.
+        !isOverlay && "card-interactive",
+        hasPriority && "priority-tint",
         isComplete && "opacity-60",
         isDragging && "opacity-40",
         isOverlay && "rotate-[1.5deg] shadow-drag",
@@ -122,6 +141,22 @@ export function TaskCard({
               className="size-3"
               aria-label={`${task.attachmentCount} attachment${task.attachmentCount === 1 ? "" : "s"}`}
             />
+          ) : null}
+
+          {/*
+            Shown whenever it is recorded, including when someone assigned the
+            task to themselves. Suppressing the self-assigned case reads as
+            cleaner but behaves worse: the row appears and disappears for
+            reasons that are invisible from the card, so the first reaction to a
+            missing line is "this is broken" rather than "that was me".
+          */}
+          {task.assignedBy ? (
+            <span
+              className="min-w-0 truncate"
+              title={`Assigned by ${task.assignedBy.name}`}
+            >
+              Assigned by {task.assignedBy.name.split(" ")[0]}
+            </span>
           ) : null}
 
           <span className="ml-auto">

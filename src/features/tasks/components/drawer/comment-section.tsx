@@ -1,12 +1,14 @@
 "use client";
 
-import { Trash2Icon } from "lucide-react";
+import { MessageSquareIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
+import { Spinner } from "@/components/common/spinner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { UserSummary } from "@/features/auth/types";
+import { DrawerSection } from "@/features/tasks/components/drawer/section";
 import { initials } from "@/features/tasks/components/task-meta";
 import {
   useCreateComment,
@@ -58,16 +60,11 @@ export function CommentSection({
   }
 
   return (
-    <section className="space-y-4">
-      <h3 className="text-sm font-medium">
-        Comments{" "}
-        {comments.length > 0 ? (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {comments.length}
-          </span>
-        ) : null}
-      </h3>
-
+    <DrawerSection
+      icon={MessageSquareIcon}
+      title="Comments"
+      meta={comments.length > 0 ? comments.length : undefined}
+    >
       {comments.length > 0 ? (
         <ul className="space-y-4">
           {comments.map((comment) => {
@@ -144,12 +141,18 @@ export function CommentSection({
 
         {body.trim() ? (
           <div className="flex justify-end">
-            <Button size="sm" onClick={submit}>
+            <Button
+              size="sm"
+              aria-busy={create.isPending}
+              disabled={create.isPending}
+              onClick={submit}
+            >
+              {create.isPending ? <Spinner /> : null}
               Comment
             </Button>
           </div>
         ) : null}
       </div>
-    </section>
+    </DrawerSection>
   );
 }

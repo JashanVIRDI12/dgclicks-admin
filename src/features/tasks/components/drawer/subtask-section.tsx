@@ -1,10 +1,11 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon } from "lucide-react";
+import { ListTreeIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Spinner } from "@/components/common/spinner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,10 @@ import {
   createTaskAction,
   setTaskCompleteAction,
 } from "@/features/tasks/actions/task.actions";
+import {
+  DrawerSection,
+  SectionEmpty,
+} from "@/features/tasks/components/drawer/section";
 import { boardKey } from "@/features/tasks/hooks/use-board";
 import { taskKey } from "@/features/tasks/hooks/use-task-workspace";
 import {
@@ -102,25 +107,27 @@ export function SubtaskSection({
   }
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium">Subtasks</h3>
-        {subtasks.length > 0 ? (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {done}/{subtasks.length}
-          </span>
-        ) : null}
+    <DrawerSection
+      icon={ListTreeIcon}
+      title="Subtasks"
+      meta={subtasks.length > 0 ? `${done}/${subtasks.length}` : undefined}
+      action={
         <Button
           variant="ghost"
           size="sm"
-          className="ml-auto h-7 text-muted-foreground"
+          className="h-7 text-muted-foreground"
+          aria-busy={create.isPending}
           onClick={() => setAdding(true)}
         >
-          <PlusIcon className="size-3.5" aria-hidden="true" />
+          {create.isPending ? (
+            <Spinner />
+          ) : (
+            <PlusIcon className="size-3.5" aria-hidden="true" />
+          )}
           Add
         </Button>
-      </div>
-
+      }
+    >
       {subtasks.length > 0 ? (
         <ul className="space-y-0.5">
           {subtasks.map((subtask) => {
@@ -192,10 +199,8 @@ export function SubtaskSection({
       ) : null}
 
       {subtasks.length === 0 && !isAdding ? (
-        <p className="text-xs text-muted-foreground">
-          Work with its own owner or deadline.
-        </p>
+        <SectionEmpty>Work that needs its own owner or deadline.</SectionEmpty>
       ) : null}
-    </section>
+    </DrawerSection>
   );
 }

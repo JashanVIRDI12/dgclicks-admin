@@ -12,13 +12,26 @@ function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Most data in an internal tool is not changing second to second.
-        // A minute of staleness removes a lot of redundant refetching.
-        staleTime: 60 * 1000,
+        /**
+         * Short, because this is a shared workspace.
+         *
+         * A minute of staleness is fine for data only you can change. It is
+         * wrong for a board several people are working on at once: it meant a
+         * colleague's new task was invisible until something else happened to
+         * invalidate the query, which in practice meant reloading the page.
+         */
+        staleTime: 10 * 1000,
         gcTime: 5 * 60 * 1000,
-        // Refetching every time the window regains focus is noisy on a
-        // dashboard people leave open all day.
-        refetchOnWindowFocus: false,
+        /**
+         * Coming back to the tab is the strongest possible signal that someone
+         * is about to look at this data, so it is the cheapest possible moment
+         * to make sure it is true. This was off to keep an idle dashboard quiet
+         * — but an idle tab issues no focus events, so it was paying that cost
+         * only in the one case where the refetch was worth it.
+         */
+        refetchOnWindowFocus: true,
+        /** Back from a dropped connection, assume everything moved on. */
+        refetchOnReconnect: true,
         retry: (failureCount, error) => {
           // Never retry an auth or validation failure — the answer will not
           // change, and retrying a 401 just delays the redirect.

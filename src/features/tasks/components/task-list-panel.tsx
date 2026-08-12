@@ -37,7 +37,7 @@ export function TaskListPanel({
   boardNames?: Map<string, string>;
 }) {
   return (
-    <section className="rounded-2xl bg-card p-4 shadow-soft">
+    <section className="card-surface p-4">
       <div className="mb-3 flex items-center gap-2">
         <Icon
           className="size-4 text-muted-foreground"

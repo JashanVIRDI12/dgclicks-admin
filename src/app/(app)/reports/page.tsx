@@ -29,7 +29,7 @@ function StatCard({
   tone?: "urgent" | "warning";
 }) {
   return (
-    <div className="rounded-2xl bg-card p-4 shadow-soft">
+    <div className="card-surface p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p
         className="mt-1 text-2xl font-semibold tabular-nums"
@@ -65,7 +65,7 @@ function Throughput({
   const total = data.reduce((sum, point) => sum + point.count, 0);
 
   return (
-    <section className="rounded-2xl bg-card p-4 shadow-soft">
+    <section className="card-surface p-4">
       <div className="mb-4 flex items-baseline gap-2">
         <h2 className="text-sm font-medium">Completed</h2>
         <span className="text-xs text-muted-foreground">
@@ -167,7 +167,7 @@ export default async function ReportsPage() {
       </FadeIn>
 
       <FadeIn delay={0.1} className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-2xl bg-card p-4 shadow-soft">
+        <section className="card-surface p-4">
           <h2 className="mb-3 text-sm font-medium">By board</h2>
 
           <ul className="space-y-3">
@@ -217,7 +217,7 @@ export default async function ReportsPage() {
           </ul>
         </section>
 
-        <section className="rounded-2xl bg-card p-4 shadow-soft">
+        <section className="card-surface p-4">
           <h2 className="mb-3 text-sm font-medium">Workload</h2>
 
           {report.byAssignee.length > 0 ? (

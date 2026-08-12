@@ -1,12 +1,17 @@
 "use client";
 
-import { PlusIcon, XIcon } from "lucide-react";
+import { ListChecksIcon, PlusIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 
+import { Spinner } from "@/components/common/spinner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import {
+  DrawerSection,
+  SectionEmpty,
+} from "@/features/tasks/components/drawer/section";
 import {
   useAddChecklistItem,
   useRemoveChecklistItem,
@@ -47,25 +52,27 @@ export function ChecklistSection({
   }
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium">Checklist</h3>
-        {items.length > 0 ? (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {done}/{items.length}
-          </span>
-        ) : null}
+    <DrawerSection
+      icon={ListChecksIcon}
+      title="Checklist"
+      meta={items.length > 0 ? `${done}/${items.length}` : undefined}
+      action={
         <Button
           variant="ghost"
           size="sm"
-          className="ml-auto h-7 text-muted-foreground"
+          className="h-7 text-muted-foreground"
+          aria-busy={add.isPending}
           onClick={() => setAdding(true)}
         >
-          <PlusIcon className="size-3.5" aria-hidden="true" />
+          {add.isPending ? (
+            <Spinner />
+          ) : (
+            <PlusIcon className="size-3.5" aria-hidden="true" />
+          )}
           Add
         </Button>
-      </div>
-
+      }
+    >
       {items.length > 0 ? (
         <Progress
           value={percent}
@@ -130,8 +137,10 @@ export function ChecklistSection({
       ) : null}
 
       {items.length === 0 && !isAdding ? (
-        <p className="text-xs text-muted-foreground">Steps to tick off.</p>
+        <SectionEmpty>
+          Steps to tick off as you work.
+        </SectionEmpty>
       ) : null}
-    </section>
+    </DrawerSection>
   );
 }

@@ -21,6 +21,7 @@ import { USER_SUMMARY_SELECT } from "@/features/auth/server/serialize";
 export const TASK_POPULATE: PopulateOptions[] = [
   { path: "assignee", select: USER_SUMMARY_SELECT },
   { path: "labels", select: "board name color" },
+  { path: "assignedBy", select: USER_SUMMARY_SELECT },
   { path: "runningTimer.user", select: USER_SUMMARY_SELECT },
 ];
 

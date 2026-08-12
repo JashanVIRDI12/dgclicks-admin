@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { RepeatIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -109,10 +109,8 @@ export function RecurrenceEditor({ task }: { task: TaskDetail }) {
             size="sm"
             className="h-7 flex-1 justify-start gap-1.5 px-2 font-normal"
           >
-            <RepeatIcon
-              className="size-3.5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
+            {/* No icon here: the property label beside it already carries the
+                repeat glyph, and two of them read as a stutter. */}
             {task.recurrence ? (
               describeRecurrence(task.recurrence)
             ) : (

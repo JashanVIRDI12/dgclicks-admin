@@ -57,7 +57,7 @@ export function WorkspaceMembers({
 
   return (
     <>
-      <section className="rounded-2xl bg-card p-4 shadow-soft">
+      <section className="card-surface p-4">
         <div className="mb-3 flex items-center gap-2">
           <h2 className="text-sm font-medium">{workspace.name}</h2>
           <span className="text-xs text-muted-foreground">

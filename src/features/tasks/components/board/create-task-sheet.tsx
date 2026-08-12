@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CalendarIcon,
   Clock3Icon,
+  ListChecksIcon,
   ListTreeIcon,
   RepeatIcon,
   UserIcon,
@@ -46,6 +47,7 @@ import {
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
 import {
+  LIMITS,
   RECURRENCE_FREQUENCIES,
   RECURRENCE_FREQUENCY_LABELS,
   SUBTASK_CREATE_LIMIT,
@@ -75,29 +77,40 @@ const DEFAULT_VALUES: CreateTaskFormValues = {
   labelIds: [],
   recurrenceFrequency: null,
   subtasks: [],
+  checklist: [],
   estimateHours: null,
 };
 
 /**
- * Subtask titles, staged until the parent exists.
+ * A list of titles, staged until the task they belong to exists.
  *
- * A subtask is a real task with a parent id, so there is nothing to hang one off
- * until the create succeeds. The titles are collected here and sent with the
- * parent; owners and dates are set from each subtask's own drawer afterwards,
- * which is the same division the task drawer's subtask list uses.
+ * Shared by subtasks and the checklist because the interaction is identical —
+ * type, Enter, repeat — even though what happens on the server is not. Subtasks
+ * become real task documents with a parent id; checklist steps are embedded on
+ * the task itself. Neither has anything to attach to until the create succeeds,
+ * so both are collected here and sent along with it.
  *
  * The draft commits on blur as well as on Enter, so clicking straight through to
  * Create does not silently discard the line still being typed.
  */
-function SubtaskDrafts({
+function StagedList({
   value,
   onChange,
+  limit,
+  placeholder,
+  itemLabel,
+  fullMessage,
 }: {
   value: string[];
   onChange: (next: string[]) => void;
+  limit: number;
+  placeholder: string;
+  /** Accessible name for the input, e.g. "New subtask". */
+  itemLabel: string;
+  fullMessage: string;
 }) {
   const [draft, setDraft] = useState("");
-  const isFull = value.length >= SUBTASK_CREATE_LIMIT;
+  const isFull = value.length >= limit;
 
   function add() {
     const trimmed = draft.trim();
@@ -136,27 +149,23 @@ function SubtaskDrafts({
       ) : null}
 
       {isFull ? (
-        <p className="text-sm text-muted-foreground">
-          That is the maximum of {SUBTASK_CREATE_LIMIT} here. Add any more from
-          the task itself.
-        </p>
+        <p className="text-sm text-muted-foreground">{fullMessage}</p>
       ) : (
         <div className="flex gap-2">
           <Input
-            id="new-task-subtask"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={add}
             onKeyDown={(event) => {
-              // Enter belongs to the subtask here, not the form — submitting the
-              // task would lose the line being typed.
+              // Enter belongs to this list, not the form — submitting the task
+              // would lose the line being typed.
               if (event.key === "Enter") {
                 event.preventDefault();
                 add();
               }
             }}
-            placeholder="e.g. Pull last month's numbers"
-            aria-label="New subtask"
+            placeholder={placeholder}
+            aria-label={itemLabel}
           />
           {/*
             Mobile only. A touch keyboard's return key is not a reliable "add
@@ -238,6 +247,7 @@ export function CreateTaskSheet({
         dueDate,
         labelIds: values.labelIds,
         subtasks: values.subtasks,
+        checklist: values.checklist,
         estimateMinutes:
           values.estimateHours === null
             ? null
@@ -469,16 +479,46 @@ export function CreateTaskSheet({
 
               <Controller
                 control={form.control}
+                name="checklist"
+                render={({ field }) => (
+                  <Field data-invalid={Boolean(errors.checklist)}>
+                    <FieldLabel>
+                      <ListChecksIcon className="size-3.5" />
+                      Checklist
+                    </FieldLabel>
+                    <StagedList
+                      value={field.value}
+                      onChange={field.onChange}
+                      limit={LIMITS.checklistItems}
+                      placeholder="e.g. Export the raw data"
+                      itemLabel="New checklist step"
+                      fullMessage={`That is the maximum of ${LIMITS.checklistItems} steps.`}
+                    />
+                    <FieldDescription>
+                      Steps to tick off inside this task. Add more later from the
+                      task itself.
+                    </FieldDescription>
+                    <FieldError errors={[errors.checklist]} />
+                  </Field>
+                )}
+              />
+
+              <Controller
+                control={form.control}
                 name="subtasks"
                 render={({ field }) => (
                   <Field data-invalid={Boolean(errors.subtasks)}>
-                    <FieldLabel htmlFor="new-task-subtask">
+                    <FieldLabel>
                       <ListTreeIcon className="size-3.5" />
                       Subtasks
                     </FieldLabel>
-                    <SubtaskDrafts
+                    <StagedList
                       value={field.value}
                       onChange={field.onChange}
+                      limit={SUBTASK_CREATE_LIMIT}
+                      placeholder="e.g. Pull last month's numbers"
+                      itemLabel="New subtask"
+                      fullMessage={`That is the maximum of ${SUBTASK_CREATE_LIMIT} here. Add any more from the task itself.`}
                     />
                     <FieldDescription>
                       Each becomes its own task under this one. Give them owners

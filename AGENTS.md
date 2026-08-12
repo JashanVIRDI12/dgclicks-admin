@@ -145,8 +145,23 @@ believing it works.
 
 ## Motion
 
-The animation budget was one component; the board needed more. It is now a
-closed list, and anything outside it needs a reason:
+**The closed list below was deliberately reopened** when the product moved to a
+premium, motion-led direction. Orchestrated motion — view transitions, spring
+physics, staggered reveals, completion flourishes — is now in scope.
+
+Two rules survive that change and are not negotiable:
+
+- `prefers-reduced-motion` is honoured globally in `globals.css`. Nothing may
+  defeat it with inline styles, and the interface must be fully usable with
+  every animation disabled.
+- Motion is never the only carrier of meaning. If an animation communicates
+  something — saved, completed, failed — a static affordance says it too.
+
+The reader can also switch off the decorative layer independently, via
+`data-effects="off"`. That hides ornament only; it must never disable a
+transition that tells someone what just happened.
+
+The original list, still the baseline for anything that does not need more:
 
 - `components/common/fade-in.tsx` for page and view entrances.
 - dnd-kit's own transforms and `DragOverlay` for anything being dragged.

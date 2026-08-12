@@ -1,7 +1,19 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarIcon, UserIcon, XIcon } from "lucide-react";
+import {
+  CalendarClockIcon,
+  CalendarIcon,
+  CircleDotIcon,
+  FlagIcon,
+  GaugeIcon,
+  RepeatIcon,
+  TagIcon,
+  UserCheckIcon,
+  UserIcon,
+  XIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -39,16 +51,29 @@ import { cn } from "@/lib/utils";
 
 const UNASSIGNED = "__unassigned__";
 
+/**
+ * One property, label left, control right.
+ *
+ * The label carries an icon so the eight rows can be told apart by shape at a
+ * glance — as plain grey words at identical weight they read as a wall, and
+ * finding "Estimate" meant reading all of them. The column is fixed so every
+ * control starts on the same vertical line.
+ */
 function Row({
+  icon: Icon,
   label,
   children,
 }: {
+  icon: LucideIcon;
   label: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[5.5rem_1fr] items-start gap-2">
-      <span className="pt-1.5 text-xs text-muted-foreground">{label}</span>
+    <div className="grid grid-cols-[6.5rem_1fr] items-start gap-2">
+      <span className="flex items-center gap-1.5 pt-1.5 text-xs text-muted-foreground">
+        <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+        {label}
+      </span>
       <div className="min-w-0">{children}</div>
     </div>
   );
@@ -86,10 +111,7 @@ function DateField({
             size="sm"
             className="h-7 flex-1 justify-start gap-1.5 px-2 font-normal"
           >
-            <CalendarIcon
-              className="size-3.5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
+            {/* The row's own label carries the calendar glyph. */}
             {selected ? (
               format(selected, "d MMM yyyy")
             ) : (
@@ -180,13 +202,13 @@ export function TaskProperties({
 
   return (
     <div className="space-y-2">
-      <Row label="Status">
+      <Row icon={CircleDotIcon} label="Status">
         <span className="inline-flex h-7 items-center px-2 text-sm">
           {task.completedAt ? "Complete" : "In progress"}
         </span>
       </Row>
 
-      <Row label="Priority">
+      <Row icon={FlagIcon} label="Priority">
         <Select
           value={task.priority}
           onValueChange={(value) =>
@@ -211,7 +233,7 @@ export function TaskProperties({
         </Select>
       </Row>
 
-      <Row label="Assignee">
+      <Row icon={UserIcon} label="Assignee">
         <Select
           value={task.assignee?.id ?? UNASSIGNED}
           onValueChange={(value) =>
@@ -229,9 +251,13 @@ export function TaskProperties({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            {/*
+              Absence reads muted everywhere in this block, so "Unassigned",
+              "No due date" and "Add labels" look like the same kind of nothing
+              rather than three different states.
+            */}
             <SelectItem value={UNASSIGNED}>
-              <UserIcon className="size-3.5 text-muted-foreground" />
-              Unassigned
+              <span className="text-muted-foreground">Unassigned</span>
             </SelectItem>
             {members.map((member) => (
               <SelectItem key={member.id} value={member.id}>
@@ -249,7 +275,7 @@ export function TaskProperties({
         an assignment that has since been handed on.
       */}
       {task.assignee && task.assignedBy ? (
-        <Row label="Assigned by">
+        <Row icon={UserCheckIcon} label="Assigned by">
           <span className="inline-flex h-7 items-center gap-1.5 px-2 text-sm">
             {task.assignedBy.id === task.assignee.id ? (
               <span className="text-muted-foreground">
@@ -265,7 +291,7 @@ export function TaskProperties({
         </Row>
       ) : null}
 
-      <Row label="Due">
+      <Row icon={CalendarIcon} label="Due">
         <DateField
           value={task.dueDate}
           placeholder="No due date"
@@ -273,7 +299,7 @@ export function TaskProperties({
         />
       </Row>
 
-      <Row label="Start">
+      <Row icon={CalendarClockIcon} label="Start">
         <DateField
           value={task.startDate}
           placeholder="No start date"
@@ -281,7 +307,7 @@ export function TaskProperties({
         />
       </Row>
 
-      <Row label="Labels">
+      <Row icon={TagIcon} label="Labels">
         <LabelPicker
           boardId={boardId}
           labels={labels}
@@ -290,7 +316,7 @@ export function TaskProperties({
         />
       </Row>
 
-      <Row label="Estimate">
+      <Row icon={GaugeIcon} label="Estimate">
         <Input
           value={estimateDraft}
           onChange={(event) => setEstimateDraft(event.target.value)}
@@ -307,7 +333,7 @@ export function TaskProperties({
         />
       </Row>
 
-      <Row label="Repeat">
+      <Row icon={RepeatIcon} label="Repeat">
         <RecurrenceEditor task={task} />
       </Row>
     </div>

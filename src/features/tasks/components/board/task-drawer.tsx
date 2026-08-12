@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsMutating } from "@tanstack/react-query";
 import {
   ArchiveIcon,
   MoreHorizontalIcon,
@@ -10,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { Spinner } from "@/components/common/spinner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -101,7 +103,10 @@ function TitleAndDescription({
         aria-label="Task title"
         className={cn(
           bare,
-          "min-h-0 px-0 py-0 text-lg leading-snug font-semibold",
+          // The panel's one piece of large type. At `text-lg` it sat at almost
+          // the same weight as the section headings below it, so nothing
+          // announced what the card actually was.
+          "min-h-0 px-0 py-0 text-xl leading-tight font-semibold tracking-tight",
           task.completedAt && "text-muted-foreground line-through",
         )}
       />
@@ -119,7 +124,10 @@ function TitleAndDescription({
         rows={2}
         placeholder="Add a description…"
         aria-label="Description"
-        className={cn(bare, "mt-1 min-h-0 px-0 py-0 text-sm")}
+        className={cn(
+          bare,
+          "mt-1.5 min-h-0 px-0 py-0 text-sm leading-relaxed text-muted-foreground focus-visible:text-foreground",
+        )}
       />
     </div>
   );
@@ -157,6 +165,7 @@ export function TaskDrawer({
   const router = useRouter();
   const [isArchivePending, startTransition] = useTransition();
   const { data, isPending: isLoading, isError } = useTaskWorkspace(taskId);
+  const isSaving = useIsMutating() > 0;
   const setComplete = useSetTaskComplete(boardId);
   const deleteTask = useDeleteTask(boardId);
 
@@ -245,6 +254,20 @@ export function TaskDrawer({
 
           <div className="ml-auto flex items-center gap-0.5">
             {/*
+              The panel has no Save button, so a write that takes a moment would
+              otherwise be completely silent — you would change a field, see
+              nothing, and wonder. `useIsMutating` covers every section at once:
+              properties, checklist, subtasks, comments, files and time all
+              report here without any of them knowing about this indicator.
+            */}
+            {isSaving ? (
+              <span className="mr-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Spinner className="size-3" />
+                Saving…
+              </span>
+            ) : null}
+
+            {/*
               Every action behind this writes to the task, so it follows the
               same permission as the checkbox above rather than appearing for
               readers who could not apply what it suggests.
@@ -307,10 +330,59 @@ export function TaskDrawer({
         <ScrollArea className="flex-1">
           <div className="px-5 py-5">
             {isLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-7 w-3/4" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-44 w-full" />
+              /*
+                Shaped like the panel it stands in for — title, description, the
+                eight property rows, then two sections — so the content lands in
+                place instead of shoving a generic block out of the way. The
+                whole thing is one `aria-busy` region with a single label, since
+                announcing a dozen placeholders individually tells a screen
+                reader nothing.
+              */
+              <div
+                className="space-y-6"
+                role="status"
+                aria-busy="true"
+                aria-label="Loading task"
+              >
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-2/3" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                </div>
+
+                <div className="space-y-2">
+                  {["status", "priority", "assignee", "due", "start", "labels", "estimate", "repeat"].map(
+                    (row, index) => (
+                      <div
+                        key={row}
+                        className="grid grid-cols-[5.5rem_1fr] items-center gap-2"
+                      >
+                        <Skeleton className="h-3 w-14" />
+                        <Skeleton
+                          className="h-6"
+                          // Varied widths so it reads as content rather than a
+                          // stack of identical bars.
+                          style={{ width: `${[45, 38, 52, 42, 40, 60, 34, 48][index]}%` }}
+                        />
+                      </div>
+                    ),
+                  )}
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-7 w-full" />
+                  <Skeleton className="h-7 w-5/6" />
+                </div>
+
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-7 w-full" />
+                </div>
+
+                <span className="sr-only">Loading task</span>
               </div>
             ) : isError || !task || !data ? (
               <SheetDescription className="text-destructive">
@@ -325,64 +397,75 @@ export function TaskDrawer({
                   </p>
                 ) : null}
 
+                {/*
+                  Three groups, not nine stacked sections: what the task *is*,
+                  what the work *is made of*, and what people have *said about
+                  it*. Separators fall between the groups only — one after every
+                  section turned the panel into a striped list where nothing was
+                  more related to anything else.
+                */}
                 <fieldset disabled={!canEdit} className="contents">
-                <TitleAndDescription
-                  // Remount on task change so the drafts reset with the card.
-                  key={task.id}
-                  task={task}
-                  boardId={boardId}
-                />
+                  <TitleAndDescription
+                    // Remount on task change so the drafts reset with the card.
+                    key={task.id}
+                    task={task}
+                    boardId={boardId}
+                  />
 
-                <TaskProperties
-                  task={task}
-                  boardId={boardId}
-                  labels={labels}
-                  members={members}
-                />
+                  <TaskProperties
+                    task={task}
+                    boardId={boardId}
+                    labels={labels}
+                    members={members}
+                  />
 
-                <Separator />
+                  <Separator />
 
-                <ChecklistSection
-                  taskId={task.id}
-                  boardId={boardId}
-                  items={task.checklist}
-                />
+                  <div className="space-y-6">
+                    <ChecklistSection
+                      taskId={task.id}
+                      boardId={boardId}
+                      items={task.checklist}
+                    />
 
-                <SubtaskSection
-                  parentId={task.id}
-                  boardId={boardId}
-                  subtasks={task.subtasks}
-                  // A subtask is a real task, so it opens in this same drawer.
-                  // It has no card on the board, but the drawer loads by id and
-                  // does not need one.
-                  onOpenTask={onOpenTask}
-                />
+                    <SubtaskSection
+                      parentId={task.id}
+                      boardId={boardId}
+                      subtasks={task.subtasks}
+                      // A subtask is a real task, so it opens in this same
+                      // drawer. It has no card on the board, but the drawer
+                      // loads by id and does not need one.
+                      onOpenTask={onOpenTask}
+                    />
 
-                <TimeSection
-                  task={task}
-                  boardId={boardId}
-                  currentUser={currentUser}
-                />
+                    <TimeSection
+                      task={task}
+                      boardId={boardId}
+                      currentUser={currentUser}
+                    />
 
-                <AttachmentSection
-                  taskId={task.id}
-                  boardId={boardId}
-                  attachments={data.attachments}
-                  currentUser={currentUser}
-                  isAdmin={isAdmin}
-                />
+                    <AttachmentSection
+                      taskId={task.id}
+                      boardId={boardId}
+                      attachments={data.attachments}
+                      currentUser={currentUser}
+                      isAdmin={isAdmin}
+                    />
+                  </div>
 
-                <Separator />
+                  <Separator />
 
-                <CommentSection
-                  taskId={task.id}
-                  boardId={boardId}
-                  comments={data.comments}
-                  currentUser={currentUser}
-                  isAdmin={isAdmin}
-                />
+                  <div className="space-y-6">
+                    <CommentSection
+                      taskId={task.id}
+                      boardId={boardId}
+                      comments={data.comments}
+                      currentUser={currentUser}
+                      isAdmin={isAdmin}
+                    />
 
-                <ActivitySection entries={data.activity} now={openedAt} />
+                    <ActivitySection entries={data.activity} now={openedAt} />
+                  </div>
                 </fieldset>
               </div>
             )}

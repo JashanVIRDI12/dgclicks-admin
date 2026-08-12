@@ -56,7 +56,7 @@ export function QuickCreateTask({ boards }: { boards: Board[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-card p-3 shadow-soft sm:flex-row">
+    <div className="card-surface flex flex-col gap-2 p-3 sm:flex-row">
       <Input
         value={title}
         onChange={(event) => setTitle(event.target.value)}
