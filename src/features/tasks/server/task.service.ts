@@ -4,7 +4,11 @@ import { Types } from "mongoose";
 
 import { toUserSummary } from "@/features/auth/server/serialize";
 import { UserModel } from "@/features/auth/server/user.model";
-import { TASK_SEARCH_LIMIT, type TaskPriority } from "@/features/tasks/constants";
+import {
+  ARCHIVE_COMPLETED_AFTER_HOURS,
+  TASK_SEARCH_LIMIT,
+  type TaskPriority,
+} from "@/features/tasks/constants";
 import {
   assertBoardAccess,
   assertBoardEditAccess,
@@ -499,6 +503,45 @@ export async function setTaskComplete(
   return getTaskById(id);
 }
 
+/**
+ * Archives work that has been finished for longer than the retention window.
+ *
+ * Runs on read, like the recurrence sweep, because there is no scheduler. Unlike
+ * that one this needs no claim and cannot race: it is a single `updateMany`
+ * whose filter (`archivedAt: null`) is also what the update clears, so two
+ * concurrent requests do not produce two outcomes — the second simply matches
+ * nothing. That is the difference between a sweep that *writes a field* and one
+ * that *creates documents*, and it is why this one is safe where recurrence
+ * needed a top-level claim.
+ *
+ * Subtasks are deliberately left alone. They are archived with their parent by
+ * the drawer, and sweeping them independently would empty a live parent's
+ * subtask list out from under it.
+ */
+export async function archiveCompletedTasks(
+  boardIds: readonly string[],
+): Promise<void> {
+  if (boardIds.length === 0) {
+    return;
+  }
+
+  await connectToDatabase();
+
+  const cutoff = new Date(
+    Date.now() - ARCHIVE_COMPLETED_AFTER_HOURS * 60 * 60 * 1000,
+  );
+
+  await TaskModel.updateMany(
+    {
+      board: { $in: boardIds.map((id) => new Types.ObjectId(id)) },
+      parent: null,
+      archivedAt: null,
+      completedAt: { $ne: null, $lte: cutoff },
+    },
+    { $set: { archivedAt: new Date() } },
+  );
+}
+
 export async function setTaskArchived(
   id: string,
   isArchived: boolean,
@@ -738,6 +781,35 @@ export async function listTasksForUser(options: {
     .populate(TASK_POPULATE)
     .sort({ dueDate: 1, position: 1 })
     .limit(500)
+    .lean<TaskDoc[]>();
+
+  return docs.map(toTask);
+}
+
+/**
+ * Archived work across a set of boards, newest first.
+ *
+ * The counterpart to every other list in the app, which all filter archived
+ * tasks out. Nothing here is deleted — this is where a task goes when the sweep
+ * retires it, and where you come to find it again or put it back.
+ */
+export async function listArchivedTasks(
+  boardIds: readonly string[],
+): Promise<Task[]> {
+  await connectToDatabase();
+
+  if (boardIds.length === 0) {
+    return [];
+  }
+
+  const docs = await TaskModel.find({
+    board: { $in: boardIds.map((id) => new Types.ObjectId(id)) },
+    parent: null,
+    archivedAt: { $ne: null },
+  })
+    .populate(TASK_POPULATE)
+    .sort({ archivedAt: -1 })
+    .limit(200)
     .lean<TaskDoc[]>();
 
   return docs.map(toTask);

@@ -1,4 +1,5 @@
 import {
+  ArchiveIcon,
   BarChart3Icon,
   BookOpenIcon,
   CalendarDaysIcon,
@@ -80,6 +81,13 @@ export const navigation: readonly NavSection[] = [
         icon: HistoryIcon,
         description: "What changed, and who changed it",
         keywords: ["history", "audit", "log", "timeline", "changes"],
+      },
+      {
+        title: "Archive",
+        href: "/archive",
+        icon: ArchiveIcon,
+        description: "Finished work, and anything you put away",
+        keywords: ["archived", "completed", "done", "finished", "restore"],
       },
       {
         title: "Reports",

@@ -146,14 +146,23 @@ export async function getDashboardData(options: {
       .limit(PANEL_LIMIT)
       .lean<TaskDoc[]>(),
 
+    /*
+      Note what is missing: `archivedAt`. Finished work is archived a day
+      later, so counting only unarchived tasks would make this number climb
+      through the day and then fall overnight as the sweep removed its own
+      evidence. Completion is a fact about a task; whether it is still on the
+      board is a fact about the board.
+    */
     TaskModel.countDocuments({
-      ...live,
+      board: boards,
+      parent: null,
       assignee: options.userId,
       completedAt: { $gte: weekStart },
     }),
 
     TaskModel.countDocuments({
-      ...live,
+      board: boards,
+      parent: null,
       assignee: options.userId,
       completedAt: { $gte: lastWeekStart, $lt: weekStart },
     }),
@@ -233,8 +242,21 @@ type CountRow = {
  * the two can never disagree about what "overdue" means.
  */
 function countStages(now: Date) {
+  // "Open" and "overdue" describe work still on the board, so they exclude
+  // anything archived. "Completed" describes something that happened, so it
+  // does not — see the note on `match`.
+  const isLive = { $eq: ["$archivedAt", null] };
+
   return {
-    open: { $sum: { $cond: [{ $eq: ["$completedAt", null] }, 1, 0] } },
+    open: {
+      $sum: {
+        $cond: [
+          { $and: [{ $eq: ["$completedAt", null] }, isLive] },
+          1,
+          0,
+        ],
+      },
+    },
     completed: { $sum: { $cond: [{ $ne: ["$completedAt", null] }, 1, 0] } },
     overdue: {
       $sum: {
@@ -242,6 +264,7 @@ function countStages(now: Date) {
           {
             $and: [
               { $eq: ["$completedAt", null] },
+              isLive,
               { $ne: ["$dueDate", null] },
               { $lt: ["$dueDate", now] },
             ],
@@ -272,7 +295,14 @@ export async function getWorkspaceReport(options: {
 
   const now = new Date();
   const boardIds = toObjectIds(options.boards.map((board) => board.id));
-  const match = { board: { $in: boardIds }, parent: null, archivedAt: null };
+  /*
+    Archived tasks are included. They are almost all *completed* tasks the
+    24-hour sweep tidied off the board, and excluding them would make a report
+    about throughput lose a day's work every day. `countStages` does the
+    filtering instead, per column: "open" and "overdue" require
+    `archivedAt: null`, "completed" does not.
+  */
+  const match = { board: { $in: boardIds }, parent: null };
   const counts = countStages(now);
 
   const [byBoardRows, byAssigneeRows, dueThisWeek, completions] =
@@ -287,8 +317,10 @@ export async function getWorkspaceReport(options: {
         { $group: { _id: "$assignee", ...counts } },
       ]),
 
+      // Upcoming work, so this one *does* want only what is still on a board.
       TaskModel.countDocuments({
         ...match,
+        archivedAt: null,
         completedAt: null,
         dueDate: { $gte: startOfDay(now), $lte: endOfDay(addDays(now, 7)) },
       }),

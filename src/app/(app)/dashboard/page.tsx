@@ -23,6 +23,7 @@ import { canEditBoard } from "@/features/tasks/permissions";
 import { listBoards } from "@/features/tasks/server/board.service";
 import { getDashboardData } from "@/features/tasks/server/insights.service";
 import { catchUpRecurrences } from "@/features/tasks/server/recurrence.service";
+import { archiveCompletedTasks } from "@/features/tasks/server/task.service";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -52,9 +53,13 @@ export default async function DashboardPage() {
   );
   const boardIds = boards.map((board) => board.id);
 
-  // The other half of recurrence generation: a task due today appears here even
-  // if nobody has opened its board.
-  await catchUpRecurrences(boardIds);
+  // Both read-triggered sweeps, run together because they are both "catch up on
+  // what should have happened while nobody was looking". Recurrence spawns work;
+  // the archive sweep retires it a day after it was finished.
+  await Promise.all([
+    catchUpRecurrences(boardIds),
+    archiveCompletedTasks(boardIds),
+  ]);
 
   const [data, activity] = await Promise.all([
     getDashboardData({ userId: session.user.id, boardIds }),

@@ -22,6 +22,7 @@ import {
   getBoardSnapshot,
 } from "@/features/tasks/server/board.service";
 import { catchUpRecurrences } from "@/features/tasks/server/recurrence.service";
+import { archiveCompletedTasks } from "@/features/tasks/server/task.service";
 import { getWorkspaceById } from "@/features/tasks/server/workspace.service";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
 
@@ -68,7 +69,12 @@ export default async function BoardPage({
   // It is claimed atomically, so two people opening this board at once still
   // produce one occurrence. Awaited before the snapshot because a task it spawns
   // has to be in the snapshot it spawned during, not the next one.
-  await catchUpRecurrences([boardId]);
+  await Promise.all([
+    catchUpRecurrences([boardId]),
+    // Retires work finished more than a day ago, so Done stays a record of what
+    // just happened rather than everything that ever has.
+    archiveCompletedTasks([boardId]),
+  ]);
 
   // `searchParams` resolves locally, so it joins the round trips rather than
   // waiting behind them.

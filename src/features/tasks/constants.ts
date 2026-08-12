@@ -187,6 +187,19 @@ export const LIMITS = {
   attachmentsPerTask: 25,
 } as const;
 
+/**
+ * How long a finished task stays on the board before it is archived.
+ *
+ * Archiving hides a task from the board and from every open-work list. It does
+ * not delete it, and — importantly — it does not stop it counting as completed:
+ * the throughput numbers deliberately ignore `archivedAt` so a tidy board and an
+ * honest "done this week" are not in competition.
+ *
+ * A day is long enough to see your own work land in Done and feel it, short
+ * enough that the column stops being a graveyard.
+ */
+export const ARCHIVE_COMPLETED_AFTER_HOURS = 24;
+
 export const BOARD_LABEL_LIMIT = 40;
 export const TASK_SEARCH_LIMIT = 8;
 
