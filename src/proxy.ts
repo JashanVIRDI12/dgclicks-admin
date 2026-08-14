@@ -32,7 +32,19 @@ export default function proxy(request: NextRequest) {
   ].includes(pathname);
 
   if (isAuthRoute) {
-    if (hasSessionCookie) {
+    /*
+      A cookie is not a session. When the app validated one server-side and
+      found it dead — expired, revoked, or unverifiable because the database is
+      unreachable — it redirects here carrying this marker, and bouncing that
+      request back to /dashboard would put the browser in a loop between the two
+      layers. It did exactly that in production.
+
+      Only the marked request is let through, so an ordinary signed-in visit to
+      /sign-in still goes to the app.
+    */
+    const isStaleSession = request.nextUrl.searchParams.has("expired");
+
+    if (hasSessionCookie && !isStaleSession) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 

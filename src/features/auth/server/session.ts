@@ -30,11 +30,26 @@ export const getSession = cache(
  * `callbackUrl` is not threaded through here — the proxy already records where
  * the user was heading. This is the fallback for direct navigation.
  */
+/**
+ * Marks a redirect as "the cookie was there, the session was not".
+ *
+ * `src/proxy.ts` bounces anyone holding a session cookie away from `/sign-in`,
+ * which is right for someone genuinely signed in and a trap for someone whose
+ * session has since expired, been revoked, or cannot be validated because the
+ * database is unreachable: the proxy sends them to the app, the app sends them
+ * back, and the browser gives up with ERR_TOO_MANY_REDIRECTS.
+ *
+ * This flag is how the two layers stop disagreeing. The proxy lets `/sign-in`
+ * render when it is present, so the loop terminates on a page the reader can
+ * actually use.
+ */
+export const STALE_SESSION_PARAM = "expired";
+
 export async function requireSession(): Promise<AuthenticatedSession> {
   const session = await getSession();
 
   if (!session) {
-    redirect("/sign-in");
+    redirect(`/sign-in?${STALE_SESSION_PARAM}=1`);
   }
 
   return session;

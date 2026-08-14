@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { sanitizeCallbackUrl } from "@/features/auth/callback-url";
 import { SignInForm } from "@/features/auth/components/sign-in-form";
+import { STALE_SESSION_PARAM } from "@/features/auth/server/session";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -23,6 +24,10 @@ export default async function SignInPage({
   const query = await searchParams;
   const callbackUrl = sanitizeCallbackUrl(query.callbackUrl);
   const passwordWasReset = query.reset === "success";
+  // Set by `requireSession()` when a cookie was present but the session behind
+  // it could not be validated. Saying so beats bouncing someone back to a blank
+  // form with no explanation for why they were signed out.
+  const sessionExpired = query[STALE_SESSION_PARAM] !== undefined;
 
   return (
     <FadeIn>
@@ -39,6 +44,14 @@ export default async function SignInPage({
             <Alert>
               <AlertDescription>
                 Your password has been reset. Sign in with the new one.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {sessionExpired && !passwordWasReset ? (
+            <Alert>
+              <AlertDescription>
+                Your session has ended. Please sign in again.
               </AlertDescription>
             </Alert>
           ) : null}
