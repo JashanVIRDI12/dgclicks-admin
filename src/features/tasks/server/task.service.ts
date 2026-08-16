@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 
 import { toUserSummary } from "@/features/auth/server/serialize";
 import { UserModel } from "@/features/auth/server/user.model";
+import { isAdminUser } from "@/features/auth/server/users.service";
 import {
   ARCHIVE_COMPLETED_AFTER_HOURS,
   TASK_SEARCH_LIMIT,
@@ -37,7 +38,7 @@ import {
 import { toTask, toTimeEntry } from "@/features/tasks/server/serialize";
 import type { Task, TaskDetail } from "@/features/tasks/types";
 import { connectToDatabase } from "@/lib/db/connect";
-import { NotFoundError, ValidationError } from "@/lib/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
 
 /** The editable half of a task. Every key is optional; absent means "leave it". */
 export type TaskPatch = {
@@ -91,6 +92,48 @@ export async function assertTaskEditAccess(
   await assertBoardEditAccess(task.board.toString(), userId);
 
   return task;
+}
+
+/**
+ * Who may change the task *itself* — its title, dates, priority, assignee,
+ * checklist, or whether it still exists.
+ *
+ * Board edit access is the floor. On top of it, once a task has an assignee it
+ * belongs to two people: whoever it was given to, and whoever gave it to them.
+ * Anyone else on the board can still read it, comment on it, log time against it
+ * and drag it between columns — they just cannot quietly rewrite somebody's
+ * work.
+ *
+ * Three deliberate exceptions:
+ *
+ *   - **Unassigned tasks stay open.** Nobody owns them yet, and locking them
+ *     would mean nobody could assign them either.
+ *   - **The creator keeps access.** Otherwise writing a task, handing it over,
+ *     and then spotting your own typo leaves you unable to fix it.
+ *   - **Global admins keep access**, so a task cannot be orphaned by the person
+ *     who owned it leaving the company.
+ */
+export async function assertTaskOwnerAccess(
+  taskId: string,
+  userId: string,
+): Promise<TaskDoc> {
+  const task = await assertTaskEditAccess(taskId, userId);
+
+  if (!task.assignee) {
+    return task;
+  }
+
+  const isInvolved = [task.assignee, task.assignedBy, task.createdBy].some(
+    (candidate) => candidate?.toString() === userId,
+  );
+
+  if (isInvolved || (await isAdminUser(userId))) {
+    return task;
+  }
+
+  throw new ForbiddenError(
+    "Only the person this is assigned to, or whoever assigned it, can change it.",
+  );
 }
 
 export async function getTaskById(id: string): Promise<Task> {

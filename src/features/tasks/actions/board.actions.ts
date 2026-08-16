@@ -167,7 +167,7 @@ export const setBoardPermissionsAction = createAction({
     await assertWorkspaceManager(existing.workspace.toString(), session.user.id);
 
     const before = await getBoardById(id);
-    const board = await setBoardPermissions(id, permissions);
+    const board = await setBoardPermissions(id, permissions, session.user.id);
 
     await recordActivity({
       actorId: session.user.id,

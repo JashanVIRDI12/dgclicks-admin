@@ -5,7 +5,7 @@ import {
   CalendarIcon,
   Clock3Icon,
   ListChecksIcon,
-  ListTreeIcon,
+  MessageSquareIcon,
   RepeatIcon,
   UserIcon,
   XIcon,
@@ -50,7 +50,6 @@ import {
   LIMITS,
   RECURRENCE_FREQUENCIES,
   RECURRENCE_FREQUENCY_LABELS,
-  SUBTASK_CREATE_LIMIT,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
 } from "@/features/tasks/constants";
@@ -78,6 +77,7 @@ const DEFAULT_VALUES: CreateTaskFormValues = {
   recurrenceFrequency: null,
   subtasks: [],
   checklist: [],
+  comment: "",
   estimateHours: null,
 };
 
@@ -248,6 +248,7 @@ export function CreateTaskSheet({
         labelIds: values.labelIds,
         subtasks: values.subtasks,
         checklist: values.checklist,
+        comment: values.comment || undefined,
         estimateMinutes:
           values.estimateHours === null
             ? null
@@ -503,31 +504,32 @@ export function CreateTaskSheet({
                 )}
               />
 
-              <Controller
-                control={form.control}
-                name="subtasks"
-                render={({ field }) => (
-                  <Field data-invalid={Boolean(errors.subtasks)}>
-                    <FieldLabel>
-                      <ListTreeIcon className="size-3.5" />
-                      Subtasks
-                    </FieldLabel>
-                    <StagedList
-                      value={field.value}
-                      onChange={field.onChange}
-                      limit={SUBTASK_CREATE_LIMIT}
-                      placeholder="e.g. Pull last month's numbers"
-                      itemLabel="New subtask"
-                      fullMessage={`That is the maximum of ${SUBTASK_CREATE_LIMIT} here. Add any more from the task itself.`}
-                    />
-                    <FieldDescription>
-                      Each becomes its own task under this one. Give them owners
-                      and dates from the task afterwards.
-                    </FieldDescription>
-                    <FieldError errors={[errors.subtasks]} />
-                  </Field>
-                )}
-              />
+              {/*
+                No subtasks here. Two ways to break a task into pieces, side by
+                side in the same form, made people pick between them before they
+                had a reason to care about the difference — and for most tasks
+                the checklist above is the one they wanted. Subtasks remain in
+                the task panel, where the difference is visible: a subtask you
+                can hand to somebody else, with its own owner and deadline.
+              */}
+
+              <Field data-invalid={Boolean(errors.comment)}>
+                <FieldLabel htmlFor="new-task-comment">
+                  <MessageSquareIcon className="size-3.5" />
+                  Comment <span className="text-muted-foreground">Optional</span>
+                </FieldLabel>
+                <Textarea
+                  id="new-task-comment"
+                  rows={2}
+                  placeholder="Anything the assignee should know before they start."
+                  aria-invalid={Boolean(errors.comment)}
+                  {...form.register("comment")}
+                />
+                <FieldDescription>
+                  Posted as you, as the first comment on the task.
+                </FieldDescription>
+                <FieldError errors={[errors.comment]} />
+              </Field>
 
               <Controller
                 control={form.control}

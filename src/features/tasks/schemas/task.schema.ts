@@ -131,6 +131,21 @@ export const createTaskSchema = taskFieldsSchema
     recurrence: recurrenceSchema.optional(),
     subtasks: subtaskTitlesSchema.optional(),
     checklist: checklistTitlesSchema.optional(),
+    /**
+     * An opening comment, posted as the creator once the task exists.
+     *
+     * One, not many: a thread starts somewhere, and a form that collected a
+     * conversation before anyone could reply to it would be pretending the task
+     * had a history it does not have.
+     */
+    comment: z
+      .string()
+      .trim()
+      .max(
+        LIMITS.commentBody,
+        `Comment must be at most ${LIMITS.commentBody.toLocaleString()} characters.`,
+      )
+      .optional(),
   })
   .superRefine((task, context) => {
     if (task.startDate && task.dueDate && task.dueDate < task.startDate) {
@@ -176,6 +191,13 @@ export const createTaskFormSchema = z
     recurrenceFrequency: z.enum(RECURRENCE_FREQUENCIES).nullable(),
     subtasks: subtaskTitlesSchema,
     checklist: checklistTitlesSchema,
+    comment: z
+      .string()
+      .trim()
+      .max(
+        LIMITS.commentBody,
+        `Comment must be at most ${LIMITS.commentBody.toLocaleString()} characters.`,
+      ),
     estimateHours: z
       .number()
       .min(0.25, "Estimate at least 15 minutes.")

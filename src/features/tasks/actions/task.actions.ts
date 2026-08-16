@@ -42,6 +42,7 @@ import {
 import {
   addChecklistItem,
   assertTaskEditAccess,
+  assertTaskOwnerAccess,
   createTask,
   deleteTask,
   getTaskById,
@@ -99,6 +100,16 @@ export const createTaskAction = createAction({
 
     const task = await createTask(input, session.user.id);
 
+    // Posted after the task exists, because a comment needs something to hang
+    // off. Its own activity entry is deliberately not recorded — "created task"
+    // and "commented on task" one second apart, by the same person, is noise.
+    if (input.comment) {
+      await createComment(
+        { taskId: task.id, body: input.comment },
+        session.user.id,
+      );
+    }
+
     await recordActivity({
       actorId: session.user.id,
       action: "created",
@@ -118,7 +129,7 @@ export const updateTaskAction = createAction({
   input: updateTaskSchema,
   handler: async ({ input, session }): Promise<Task> => {
     const { id, ...patch } = input;
-    const existing = await assertTaskEditAccess(id, session.user.id);
+    const existing = await assertTaskOwnerAccess(id, session.user.id);
     const boardId = existing.board.toString();
 
     const before = await getTaskById(id);
@@ -193,7 +204,7 @@ export const setTaskRecurrenceAction = createAction({
   auth: true,
   input: setTaskRecurrenceSchema,
   handler: async ({ input, session }): Promise<Task> => {
-    const existing = await assertTaskEditAccess(input.id, session.user.id);
+    const existing = await assertTaskOwnerAccess(input.id, session.user.id);
     const boardId = existing.board.toString();
 
     const task = await setTaskRecurrence(input.id, input.recurrence);
@@ -251,7 +262,7 @@ export const setTaskArchivedAction = createAction({
   auth: true,
   input: taskIdSchema,
   handler: async ({ input, session }): Promise<Task> => {
-    const existing = await assertTaskEditAccess(input.id, session.user.id);
+    const existing = await assertTaskOwnerAccess(input.id, session.user.id);
     const boardId = existing.board.toString();
     const isArchived = existing.archivedAt === null;
 
@@ -275,7 +286,7 @@ export const deleteTaskAction = createAction({
   auth: ["admin"],
   input: taskIdSchema,
   handler: async ({ input, session }) => {
-    const existing = await assertTaskEditAccess(input.id, session.user.id);
+    const existing = await assertTaskOwnerAccess(input.id, session.user.id);
     const boardId = existing.board.toString();
     const task = await getTaskById(input.id);
 
@@ -298,7 +309,7 @@ export const addChecklistItemAction = createAction({
   auth: true,
   input: addChecklistItemSchema,
   handler: async ({ input, session }): Promise<Task> => {
-    const existing = await assertTaskEditAccess(input.taskId, session.user.id);
+    const existing = await assertTaskOwnerAccess(input.taskId, session.user.id);
     const task = await addChecklistItem(input.taskId, input.title);
 
     revalidateTaskScope(existing.board.toString());
@@ -310,7 +321,7 @@ export const updateChecklistItemAction = createAction({
   auth: true,
   input: updateChecklistItemSchema,
   handler: async ({ input, session }): Promise<Task> => {
-    const existing = await assertTaskEditAccess(input.taskId, session.user.id);
+    const existing = await assertTaskOwnerAccess(input.taskId, session.user.id);
 
     const task = await updateChecklistItem(input.taskId, input.itemId, {
       title: input.title,
@@ -326,7 +337,7 @@ export const removeChecklistItemAction = createAction({
   auth: true,
   input: removeChecklistItemSchema,
   handler: async ({ input, session }): Promise<Task> => {
-    const existing = await assertTaskEditAccess(input.taskId, session.user.id);
+    const existing = await assertTaskOwnerAccess(input.taskId, session.user.id);
     const task = await removeChecklistItem(input.taskId, input.itemId);
 
     revalidateTaskScope(existing.board.toString());

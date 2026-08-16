@@ -367,6 +367,7 @@ export async function updateBoard(
 export async function setBoardPermissions(
   id: string,
   input: { accessMode: BoardAccessMode; editorIds: string[] },
+  actorId: string,
 ): Promise<Board> {
   await connectToDatabase();
 
@@ -384,7 +385,14 @@ export async function setBoardPermissions(
   const members = new Set(
     (workspace?.members ?? []).map((memberId) => memberId.toString()),
   );
-  const editorIds = [...new Set(input.editorIds)];
+  /*
+    Whoever is setting the permissions stays on the list, exactly as the actor
+    stays a member in `setWorkspaceMembers`. Making a board private and
+    forgetting to tick yourself hides it from your own sidebar, and the way back
+    is to find an administrator — which is a poor thing to discover immediately
+    after clicking Save.
+  */
+  const editorIds = [...new Set([...input.editorIds, actorId])];
 
   if (editorIds.some((editorId) => !members.has(editorId))) {
     throw new ValidationError("Please check the selected board editors.", {
@@ -396,10 +404,24 @@ export async function setBoardPermissions(
     id,
     {
       accessMode: input.accessMode,
+      /*
+        Kept for `restricted` *and* `private`, cleared only for `workspace`.
+
+        This previously saved them for `restricted` alone, so choosing `private`
+        and picking people discarded the picks: the board was written with an
+        empty `editors` array, which matches neither branch of the `$or` in
+        `listBoards`. The result was a board that disappeared for everyone
+        except global administrators — including, usually, the person who had
+        just set it up.
+
+        `private` is the mode that needs this list most. Under `restricted` the
+        editors decide who can *change* the board; under `private` they decide
+        who can see it exists at all.
+      */
       editors:
-        input.accessMode === "restricted"
-          ? editorIds.map((editorId) => new Types.ObjectId(editorId))
-          : [],
+        input.accessMode === "workspace"
+          ? []
+          : editorIds.map((editorId) => new Types.ObjectId(editorId)),
     },
     { new: true, runValidators: true },
   )

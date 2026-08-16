@@ -565,6 +565,7 @@ export function useCreateTask(boardId: string) {
       recurrence?: RecurrenceInput;
       subtasks?: string[];
       checklist?: string[];
+      comment?: string;
     }) => {
       const result = await createTaskAction({ ...input, boardId });
 
@@ -575,9 +576,28 @@ export function useCreateTask(boardId: string) {
       return result.data;
     },
     onSuccess: (task) => {
-      queryClient.setQueryData<BoardSnapshot>(boardKey(boardId), (current) =>
-        current ? { ...current, tasks: [...current.tasks, task] } : current,
-      );
+      queryClient.setQueryData<BoardSnapshot>(boardKey(boardId), (current) => {
+        if (!current) {
+          return current;
+        }
+
+        /*
+          Append only if it is not already here.
+
+          `createTaskAction` revalidates, so the server action ships back a
+          re-rendered board whose snapshot already contains this task — and
+          `useBoard` writes that snapshot into this same cache entry. Appending
+          unconditionally raced with it and drew the card twice, until the
+          refetch in `onSettled` replaced the lot a moment later. Two cards
+          appearing and one vanishing is a worse first impression than the
+          slightly slower path this guards.
+        */
+        if (current.tasks.some((existing) => existing.id === task.id)) {
+          return current;
+        }
+
+        return { ...current, tasks: [...current.tasks, task] };
+      });
     },
     onError: (error) => {
       toast.error(error.message);

@@ -3,6 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/common/empty-state";
+import { LocalTime } from "@/components/common/local-time";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ACTIVITY_ENTITY_LABELS,
@@ -48,13 +49,6 @@ function initials(name: string): string {
       .join("")
       .toUpperCase() || "?"
   );
-}
-
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }
 
 /**
@@ -176,9 +170,10 @@ function ActivityItem({ entry }: { entry: ActivityEntry }) {
           </ul>
         ) : null}
 
-        <p className="text-xs text-muted-foreground">
-          {formatTimestamp(entry.createdAt)}
-        </p>
+        <LocalTime
+          iso={entry.createdAt}
+          className="block text-xs text-muted-foreground"
+        />
       </div>
     </li>
   );
