@@ -87,8 +87,42 @@ export const mongoClient: MongoClient =
     // Keep the pool modest: dev reloads and serverless instances can otherwise
     // exhaust the Atlas connection limit.
     maxPoolSize: 10,
-    minPoolSize: 0,
+    /**
+     * One warm socket per instance.
+     *
+     * Was 0, which let the pool drain to nothing between requests. Every
+     * subsequent query then paid a fresh TCP handshake plus a TLS handshake
+     * plus SCRAM authentication before it could send anything — three extra
+     * round trips, and at ~185ms each that is over half a second of pure
+     * setup on a link this long. Holding one connection open makes the common
+     * case a single round trip.
+     */
+    minPoolSize: 1,
     retryWrites: true,
+
+    /**
+     * Compress the wire protocol.
+     *
+     * A board snapshot is a few hundred KB of BSON — task documents carry their
+     * checklists and time entries — and on a cross-region link transfer time is
+     * a real share of the total. `zstd` typically cuts that 60–80% for
+     * repetitive documents like these, at negligible CPU. `snappy` is the
+     * fallback for servers that do not negotiate zstd.
+     */
+    compressors: ["zstd", "snappy"],
+
+    /**
+     * Fail fast instead of hanging.
+     *
+     * The defaults are 30s server selection and no socket timeout, so a network
+     * problem in production surfaced as a request that appeared to hang until
+     * the platform killed it. These bound the damage to something a user can
+     * interpret, and are still far above the ~370ms a healthy round trip takes.
+     */
+    serverSelectionTimeoutMS: 8000,
+    socketTimeoutMS: 45000,
+    /** Drop idle sockets before Atlas does, so a dead one is never reused. */
+    maxIdleTimeMS: 60_000,
   });
 
 if (!env.isProduction) {

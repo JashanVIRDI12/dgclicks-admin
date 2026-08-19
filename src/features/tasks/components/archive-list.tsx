@@ -1,6 +1,6 @@
 "use client";
 
-import { ArchiveRestoreIcon, InboxIcon } from "lucide-react";
+import { ArchiveRestoreIcon, InboxIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
@@ -8,8 +8,20 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Spinner } from "@/components/common/spinner";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { setTaskArchivedAction } from "@/features/tasks/actions/task.actions";
+import {
+  deleteTaskAction,
+  setTaskArchivedAction,
+} from "@/features/tasks/actions/task.actions";
 import {
   AssigneeAvatar,
   PriorityIcon,
@@ -26,23 +38,48 @@ function archivedOn(iso: string | null): string {
 }
 
 /**
- * Archived work, with a way back.
+ * Archived work: put it back, or destroy it for good.
  *
- * Restore is the only action here. Deleting from the archive would make this
- * screen the most dangerous one in the app — a list of things already out of
- * sight, with a permanent action next to each — and permanent task deletion
- * already exists in the drawer, where the task is in front of you.
+ * This is now the only place a task can be permanently deleted. It used to sit
+ * in the task menu directly beneath Archive, which put the irreversible action
+ * one row from the reversible one on a card somebody was already looking at.
+ * Routing it through here means destroying a task takes two deliberate steps —
+ * archive it, then come and find it — and everything before the last one can be
+ * undone.
+ *
+ * Deletion stays admin-only, and asks. Restore does not: putting something back
+ * is not a decision anyone needs protecting from.
  */
 export function ArchiveList({
   tasks,
   boardNames,
+  isAdmin,
 }: {
   tasks: Task[];
   boardNames: Record<string, string>;
+  /** Permanent deletion is admin-only; restore is open to anyone who can see it. */
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
+
+  function destroy(task: Task) {
+    startTransition(async () => {
+      const result = await deleteTaskAction({ id: task.id });
+
+      setPendingDelete(null);
+
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(`${task.title} deleted permanently.`);
+      router.refresh();
+    });
+  }
 
   function restore(task: Task) {
     setRestoringId(task.id);
@@ -121,8 +158,53 @@ export function ArchiveList({
             )}
             Restore
           </Button>
+
+          {isAdmin ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Delete ${task.title} permanently`}
+              disabled={isPending}
+              onClick={() => setPendingDelete(task)}
+              className="size-7 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
+            >
+              <Trash2Icon className="size-3.5" aria-hidden="true" />
+            </Button>
+          ) : null}
         </li>
       ))}
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {pendingDelete?.title} permanently?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the task and its subtasks, comments and time entries.
+              It cannot be undone — restoring it puts it back on the board, and
+              that option disappears with it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => pendingDelete && destroy(pendingDelete)}
+            >
+              {isPending ? <Spinner /> : null}
+              Delete permanently
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ul>
   );
 }

@@ -6,6 +6,11 @@ import type { AuthenticatedSession } from "@/features/auth/server/session";
 import { getSessionRole } from "@/features/auth/server/session";
 import { listTeamMembers } from "@/features/auth/server/users.service";
 import {
+  forgetMemory,
+  MEMORY_TYPES,
+  rememberMemory,
+} from "@/features/assistant/server/assistant-memory";
+import {
   createBoardAction,
   createLabelAction,
   createListAction,
@@ -76,6 +81,14 @@ import { objectId } from "@/lib/validation";
 
 type ToolContext = {
   session: AuthenticatedSession;
+  /**
+   * Where the user is, as the request reported it.
+   *
+   * Only memory uses it so far, and it needs it: a memory saved without a
+   * workspace becomes true of the person everywhere, which is right for "keep
+   * replies short" and wrong for "the SEO board is Priya's".
+   */
+  context: { workspaceId: string | null; boardId: string | null };
 };
 
 export type ToolConfirmation = {
@@ -189,6 +202,67 @@ const tools = [
       }
 
       return { payload: { ok: true, data: await listTeamMembers() } };
+    },
+  }),
+  /**
+   * Memory is written by the model, on purpose.
+   *
+   * The alternative — a second model call after every turn to extract "what
+   * should I remember from that?" — doubles the cost of every message to
+   * capture something worth keeping perhaps one turn in twenty, and it saves
+   * things nobody asked to be saved. Making it a tool means memory is written
+   * when there is a reason to write one, and the reason is visible in the
+   * transcript.
+   */
+  defineTool({
+    name: "remember",
+    description:
+      "Save one durable fact about this user or workspace for future conversations. Use only for things still true next week: a stated preference, a team convention, a decision taken, who owns what. Never save the contents of a task, anything already stored on a record, or a restatement of the current message.",
+    input: z.object({
+      type: z.enum(MEMORY_TYPES),
+      content: z
+        .string()
+        .trim()
+        .min(3)
+        .max(400)
+        .describe("One sentence, written so it makes sense with no context."),
+      importance: z
+        .number()
+        .min(0)
+        .max(1)
+        .default(0.5)
+        .describe("0.9 for an explicit 'remember this', 0.4 for an inference."),
+      /** Global memories follow the person; scoped ones stay in one workspace. */
+      global: z
+        .boolean()
+        .default(false)
+        .describe(
+          "True only for how this person likes to work. Anything about a project, team or board is not global.",
+        ),
+    }),
+    execute: async (input, { session, context }) => {
+      const memory = await rememberMemory({
+        userId: session.user.id,
+        workspaceId: input.global ? null : context.workspaceId,
+        type: input.type,
+        content: input.content,
+        importance: input.importance,
+      });
+
+      return { payload: { ok: true, data: memory } };
+    },
+  }),
+  defineTool({
+    name: "forget",
+    description:
+      "Delete a remembered fact by id, when the user says it is wrong or no longer true. Ids come from the memory list in your context.",
+    input: z.object({ memoryId: objectId }),
+    execute: async (input, { session }) => {
+      const removed = await forgetMemory(session.user.id, input.memoryId);
+
+      return removed
+        ? { payload: { ok: true } }
+        : { payload: { ok: false, error: "No such memory." } };
     },
   }),
   defineTool({

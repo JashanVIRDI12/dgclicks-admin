@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { FadeIn } from "@/components/common/fade-in";
 import { PageHeader } from "@/components/common/page-header";
-import { requireSession } from "@/features/auth/server/session";
+import { getSessionRole, requireSession } from "@/features/auth/server/session";
 import { ArchiveList } from "@/features/tasks/components/archive-list";
 import { WorkspaceOnboarding } from "@/features/tasks/components/workspace-onboarding";
 import { getActiveWorkspaceContext } from "@/features/tasks/server/active-workspace";
@@ -49,7 +49,11 @@ export default async function ArchivePage() {
       />
 
       <FadeIn>
-        <ArchiveList tasks={tasks} boardNames={boardNames} />
+        <ArchiveList
+          tasks={tasks}
+          boardNames={boardNames}
+          isAdmin={getSessionRole(session) === "admin"}
+        />
       </FadeIn>
     </div>
   );

@@ -1,12 +1,7 @@
 "use client";
 
 import { useIsMutating } from "@tanstack/react-query";
-import {
-  ArchiveIcon,
-  MoreHorizontalIcon,
-  Trash2Icon,
-  XIcon,
-} from "lucide-react";
+import { ArchiveIcon, MoreHorizontalIcon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -36,14 +31,12 @@ import { taskAssistantActions } from "@/features/assistant/prompts";
 import type { UserSummary } from "@/features/auth/types";
 import { setTaskArchivedAction } from "@/features/tasks/actions/task.actions";
 import { ActivitySection } from "@/features/tasks/components/drawer/activity-section";
-import { AttachmentSection } from "@/features/tasks/components/drawer/attachment-section";
 import { ChecklistSection } from "@/features/tasks/components/drawer/checklist-section";
 import { CommentSection } from "@/features/tasks/components/drawer/comment-section";
 import { SubtaskSection } from "@/features/tasks/components/drawer/subtask-section";
 import { TaskProperties } from "@/features/tasks/components/drawer/task-properties";
 import { TimeSection } from "@/features/tasks/components/drawer/time-section";
 import {
-  useDeleteTask,
   useSetTaskComplete,
   useUpdateTask,
 } from "@/features/tasks/hooks/use-board";
@@ -167,7 +160,6 @@ export function TaskDrawer({
   const { data, isPending: isLoading, isError } = useTaskWorkspace(taskId);
   const isSaving = useIsMutating() > 0;
   const setComplete = useSetTaskComplete(boardId);
-  const deleteTask = useDeleteTask(boardId);
 
   // Read once, through a lazy initialiser: relative timestamps need the current
   // time, and calling `new Date()` in the component body is the impurity the
@@ -190,19 +182,6 @@ export function TaskDrawer({
       onClose();
       toast.success("Task archived.");
       router.refresh();
-    });
-  }
-
-  function remove() {
-    if (!taskId) {
-      return;
-    }
-
-    deleteTask.mutate(taskId, {
-      onSuccess: () => {
-        onClose();
-        toast.success("Task deleted.");
-      },
     });
   }
 
@@ -292,25 +271,24 @@ export function TaskDrawer({
                   </Button>
                 </DropdownMenuTrigger>
 
+                {/*
+                  Archive is the only way out of a board.
+
+                  Permanent deletion used to sit right here, one menu item below
+                  it — two destructive-looking actions side by side, where the
+                  irreversible one was a single click from the reversible one.
+                  It now lives on the Archive page: to destroy a task you first
+                  have to archive it, then find it again and confirm. Two
+                  deliberate steps, and everything in between is recoverable.
+                */}
                 <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuItem
                     onSelect={archive}
-                    disabled={isArchivePending || deleteTask.isPending}
+                    disabled={isArchivePending}
                   >
                     <ArchiveIcon className="size-4" aria-hidden="true" />
                     Archive
                   </DropdownMenuItem>
-
-                  {isAdmin ? (
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onSelect={remove}
-                      disabled={isArchivePending || deleteTask.isPending}
-                    >
-                      <Trash2Icon className="size-4" aria-hidden="true" />
-                      Delete
-                    </DropdownMenuItem>
-                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
@@ -444,13 +422,6 @@ export function TaskDrawer({
                       currentUser={currentUser}
                     />
 
-                    <AttachmentSection
-                      taskId={task.id}
-                      boardId={boardId}
-                      attachments={data.attachments}
-                      currentUser={currentUser}
-                      isAdmin={isAdmin}
-                    />
                   </div>
 
                   <Separator />

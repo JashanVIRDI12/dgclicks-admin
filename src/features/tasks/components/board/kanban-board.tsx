@@ -30,12 +30,28 @@ import { CreateTaskSheet } from "@/features/tasks/components/board/create-task-s
 import { KanbanColumn } from "@/features/tasks/components/board/kanban-column";
 import { TaskCard } from "@/features/tasks/components/board/task-card";
 import { useMoveTask } from "@/features/tasks/hooks/use-board";
+import { TASK_PRIORITY_RANK } from "@/features/tasks/constants";
 import type { BoardSnapshot, List, Task } from "@/features/tasks/types";
 
 /** Tasks per column, in display order. */
 type Columns = Record<string, Task[]>;
 
-function groupByList(tasks: Task[], lists: List[]): Columns {
+/**
+ * How the cards inside a column are ordered.
+ *
+ * `manual` is the fractional `position` everyone drags into place. `priority`
+ * ignores it and ranks by urgency instead — which is why dragging is switched
+ * off while it is active: a card you dropped somewhere would immediately sort
+ * back, and a board that undoes your gesture reads as broken rather than
+ * opinionated.
+ */
+export type BoardSort = "manual" | "priority";
+
+function groupByList(
+  tasks: Task[],
+  lists: List[],
+  sort: BoardSort,
+): Columns {
   const columns: Columns = {};
 
   for (const list of lists) {
@@ -47,7 +63,14 @@ function groupByList(tasks: Task[], lists: List[]): Columns {
   }
 
   for (const listId of Object.keys(columns)) {
-    columns[listId]?.sort((a, b) => a.position - b.position);
+    columns[listId]?.sort((a, b) =>
+      sort === "priority"
+        ? // Position breaks the tie, so two urgent cards keep the order their
+          // owners put them in rather than shuffling on every render.
+          TASK_PRIORITY_RANK[a.priority] - TASK_PRIORITY_RANK[b.priority] ||
+          a.position - b.position
+        : a.position - b.position,
+    );
   }
 
   return columns;
@@ -77,11 +100,13 @@ export function KanbanBoard({
   members,
   onOpenTask,
   canEdit,
+  sort,
 }: {
   snapshot: BoardSnapshot;
   members: UserSummary[];
   onOpenTask: (taskId: string) => void;
   canEdit: boolean;
+  sort: BoardSort;
 }) {
   const router = useRouter();
   const boardId = snapshot.board.id;
@@ -101,7 +126,10 @@ export function KanbanBoard({
   const [isAddingList, setAddingList] = useState(false);
   const [createListId, setCreateListId] = useState<string | null>(null);
 
-  const columns = dragColumns ?? groupByList(snapshot.tasks, snapshot.lists);
+  // Manual order is the only one a drag can express, so sorting disables it.
+  const canDrag = canEdit && sort === "manual";
+  const columns =
+    dragColumns ?? groupByList(snapshot.tasks, snapshot.lists, sort);
   const listIds = snapshot.lists.map((list) => list.id);
   const createList = snapshot.lists.find((list) => list.id === createListId);
 
@@ -134,7 +162,7 @@ export function KanbanBoard({
       const task = snapshot.tasks.find((item) => item.id === event.active.id);
       originListId.current = task?.listId ?? null;
       setActiveTask(task ?? null);
-      setDragColumns(groupByList(snapshot.tasks, snapshot.lists));
+      setDragColumns(groupByList(snapshot.tasks, snapshot.lists, sort));
     }
   }
 
@@ -342,7 +370,9 @@ export function KanbanBoard({
               onOpenTask={onOpenTask}
               onCreateTask={setCreateListId}
               canDeleteList={snapshot.lists.length > 1}
-              canEdit={canEdit}
+              // Drag is off while a sort is active; the column's other controls
+              // still follow board edit access.
+              canEdit={canDrag}
             />
           ))}
         </SortableContext>

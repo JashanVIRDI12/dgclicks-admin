@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowDownWideNarrowIcon,
   CalendarDaysIcon,
   CheckIcon,
   GanttChartIcon,
@@ -27,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { AskAiButton } from "@/features/assistant/components/ask-ai-button";
 import { boardAssistantActions } from "@/features/assistant/prompts";
 import { BoardPermissionsDialog } from "@/features/tasks/components/board-permissions-dialog";
+import type { BoardSort } from "@/features/tasks/components/board/kanban-board";
 import { LabelDot } from "@/features/tasks/components/label-chip";
 import { PriorityIcon } from "@/features/tasks/components/task-meta";
 import {
@@ -89,6 +91,8 @@ export function BoardToolbar({
   labels,
   members,
   canManageWorkspace,
+  sort,
+  onSortChange,
 }: {
   view: BoardView;
   onViewChange: (view: BoardView) => void;
@@ -102,6 +106,9 @@ export function BoardToolbar({
    * the creator, an appointed manager, or a global admin.
    */
   canManageWorkspace: boolean;
+  /** Card order inside a column. Only the Board view honours it. */
+  sort: BoardSort;
+  onSortChange: (sort: BoardSort) => void;
 }) {
   const activeCount = countActiveFilters(filters);
   const [isPermissionsOpen, setPermissionsOpen] = useState(false);
@@ -256,6 +263,33 @@ export function BoardToolbar({
           </DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/*
+        Only offered on the Board view. List, Calendar and Timeline each impose
+        their own order — a sort control that visibly did nothing on three of
+        four views would be worse than not having one.
+      */}
+      {view === "kanban" ? (
+        <Button
+          variant={sort === "priority" ? "secondary" : "outline"}
+          size="sm"
+          className="h-8"
+          aria-pressed={sort === "priority"}
+          onClick={() =>
+            onSortChange(sort === "priority" ? "manual" : "priority")
+          }
+          title={
+            sort === "priority"
+              ? "Sorted by priority — dragging is off. Click to return to manual order."
+              : "Sort every column by priority"
+          }
+        >
+          <ArrowDownWideNarrowIcon className="size-3.5" aria-hidden="true" />
+          <span className="hidden sm:inline">
+            {sort === "priority" ? "By priority" : "Sort"}
+          </span>
+        </Button>
+      ) : null}
 
       {canManageWorkspace ? (
         <>

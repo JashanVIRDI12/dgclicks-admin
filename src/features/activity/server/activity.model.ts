@@ -46,7 +46,29 @@ const activitySchema = new Schema(
 );
 
 // The global feed.
-activitySchema.index({ createdAt: -1 });
+/**
+ * Retention. The audit trail expires itself.
+ *
+ * This is the only collection in the schema that grows without bound and is
+ * never cleaned up — one document per action, forever. On a 512 MB cluster
+ * that is the difference between a database that lasts years and one that
+ * fills up in a busy quarter.
+ *
+ * A TTL index makes MongoDB do it: a background thread deletes anything older
+ * than the window, roughly once a minute, at no cost to the application. Ninety
+ * days is well past the point anyone scrolls back to, and the things people
+ * actually need long-term — who a task is assigned to, when it was completed,
+ * what is archived — live on the records themselves, not in this feed.
+ *
+ * Deliberately *not* applied to `task`, `comment` or `attachment`. Expiring
+ * someone's work because it is old is data loss wearing a maintenance costume.
+ */
+export const ACTIVITY_RETENTION_DAYS = 90;
+
+activitySchema.index(
+  { createdAt: -1 },
+  { expireAfterSeconds: ACTIVITY_RETENTION_DAYS * 24 * 60 * 60 },
+);
 // One board's feed, including everything nested under it.
 activitySchema.index({ board: 1, createdAt: -1 });
 // A single record's timeline, and the same for anything nested under it.

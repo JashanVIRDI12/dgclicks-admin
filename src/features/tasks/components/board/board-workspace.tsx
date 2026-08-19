@@ -10,7 +10,10 @@ import {
   type BoardFilters,
 } from "@/features/tasks/components/board/board-toolbar";
 import { CalendarView } from "@/features/tasks/components/board/calendar-view";
-import { KanbanBoard } from "@/features/tasks/components/board/kanban-board";
+import {
+  KanbanBoard,
+  type BoardSort,
+} from "@/features/tasks/components/board/kanban-board";
 import { ListView } from "@/features/tasks/components/board/list-view";
 import { TaskDrawer } from "@/features/tasks/components/board/task-drawer";
 import { TimelineView } from "@/features/tasks/components/board/timeline-view";
@@ -121,6 +124,12 @@ export function BoardWorkspace({
   const [view, setView] = useState<BoardView>(initialView);
   const [openTaskId, setOpenTaskId] = useState<string | null>(initialTaskId);
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_FILTERS);
+  /**
+   * Card order within a column. Kept out of `filters` on purpose — a filter
+   * changes *which* cards you see, this changes how they are stacked, and the
+   * Clear button should not silently put the board back into manual order.
+   */
+  const [sort, setSort] = useState<BoardSort>("manual");
 
   /**
    * Re-sync when the URL changes from outside — following a link from the
@@ -163,6 +172,8 @@ export function BoardWorkspace({
         labels={snapshot.labels}
         members={members}
         canManageWorkspace={canManageWorkspace}
+        sort={sort}
+        onSortChange={setSort}
       />
 
       {/*
@@ -177,6 +188,7 @@ export function BoardWorkspace({
             members={members}
             onOpenTask={openTask}
             canEdit={canEdit}
+            sort={sort}
           />
         ) : view === "list" ? (
           <ListView
