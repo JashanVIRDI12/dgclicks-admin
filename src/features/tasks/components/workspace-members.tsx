@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { setWorkspaceMembersAction } from "@/features/tasks/actions/workspace.actions";
+import { WorkspaceAddMembers } from "@/features/tasks/components/workspace-add-members";
 import { WorkspaceFormDialog } from "@/features/tasks/components/workspace-form-dialog";
 import { WorkspacePermissionsDialog } from "@/features/tasks/components/workspace-permissions-dialog";
 import { AssigneeAvatar } from "@/features/tasks/components/task-meta";
@@ -67,6 +68,7 @@ export function WorkspaceMembers({
 
           {canManage ? (
             <div className="ml-auto flex items-center gap-1">
+              <WorkspaceAddMembers workspace={workspace} />
               <Button
                 variant="ghost"
                 size="sm"
@@ -143,7 +145,8 @@ export function WorkspaceMembers({
 
         {canManage ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            Add someone with an invite link below. Removing a member also drops
+            Add people who already have an account above, or share an invite
+            link below with someone who does not. Removing a member also drops
             any workspace management they had.
           </p>
         ) : null}

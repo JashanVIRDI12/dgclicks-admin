@@ -25,6 +25,17 @@ export const workspaceMembersSchema = z.object({
   memberIds: z.array(objectId).max(200, "At most 200 members."),
 });
 
+/** Adds people to a workspace without resending the members it already has. */
+export const addWorkspaceMembersSchema = z.object({
+  id: objectId,
+  memberIds: z
+    .array(objectId)
+    .min(1, "Choose at least one person.")
+    .max(50, "Add at most 50 people at a time."),
+});
+
+export const workspaceIdSchema = z.object({ id: objectId });
+
 export const workspaceManagersSchema = z.object({
   id: objectId,
   managerIds: z.array(objectId).max(200, "At most 200 managers."),

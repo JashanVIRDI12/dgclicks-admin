@@ -1,12 +1,26 @@
 "use client";
 
 import { useIsMutating } from "@tanstack/react-query";
-import { ArchiveIcon, MoreHorizontalIcon, XIcon } from "lucide-react";
+import {
+  ArchiveIcon,
+  MoreHorizontalIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Spinner } from "@/components/common/spinner";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -37,6 +51,7 @@ import { SubtaskSection } from "@/features/tasks/components/drawer/subtask-secti
 import { TaskProperties } from "@/features/tasks/components/drawer/task-properties";
 import { TimeSection } from "@/features/tasks/components/drawer/time-section";
 import {
+  useDeleteTask,
   useSetTaskComplete,
   useUpdateTask,
 } from "@/features/tasks/hooks/use-board";
@@ -160,6 +175,8 @@ export function TaskDrawer({
   const { data, isPending: isLoading, isError } = useTaskWorkspace(taskId);
   const isSaving = useIsMutating() > 0;
   const setComplete = useSetTaskComplete(boardId);
+  const deleteTask = useDeleteTask(boardId);
+  const [isConfirmingDelete, setConfirmingDelete] = useState(false);
 
   // Read once, through a lazy initialiser: relative timestamps need the current
   // time, and calling `new Date()` in the component body is the impurity the
@@ -182,6 +199,29 @@ export function TaskDrawer({
       onClose();
       toast.success("Task archived.");
       router.refresh();
+    });
+  }
+
+  /**
+   * Permanent deletion, from the card itself.
+   *
+   * Behind a confirmation rather than a bare menu click. It sits two rows below
+   * Archive, which is completely reversible, and the dialog is what keeps the
+   * two apart — a destructive item that fires on one click next to a safe one
+   * is how people lose work they meant to file away.
+   */
+  function remove() {
+    if (!taskId) {
+      return;
+    }
+
+    deleteTask.mutate(taskId, {
+      onSuccess: () => {
+        setConfirmingDelete(false);
+        onClose();
+        toast.success("Task deleted permanently.");
+        router.refresh();
+      },
     });
   }
 
@@ -272,14 +312,14 @@ export function TaskDrawer({
                 </DropdownMenuTrigger>
 
                 {/*
-                  Archive is the only way out of a board.
+                  Archive first, delete second — and delete is admin-only.
 
-                  Permanent deletion used to sit right here, one menu item below
-                  it — two destructive-looking actions side by side, where the
-                  irreversible one was a single click from the reversible one.
-                  It now lives on the Archive page: to destroy a task you first
-                  have to archive it, then find it again and confirm. Two
-                  deliberate steps, and everything in between is recoverable.
+                  These sat side by side once with no confirmation on either,
+                  which put an irreversible action one click from a reversible
+                  one on a card somebody was already looking at. Both are still
+                  here because clearing a card and destroying it are different
+                  intentions, but the destructive one now asks first and names
+                  the task in the question.
                 */}
                 <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuItem
@@ -289,6 +329,20 @@ export function TaskDrawer({
                     <ArchiveIcon className="size-4" aria-hidden="true" />
                     Archive
                   </DropdownMenuItem>
+
+                  {/* Admin only, and it asks. Archive is the everyday way to
+                      clear a card; this is for work that should never have
+                      existed. */}
+                  {isAdmin ? (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onSelect={() => setConfirmingDelete(true)}
+                      disabled={isArchivePending || deleteTask.isPending}
+                    >
+                      <Trash2Icon className="size-4" aria-hidden="true" />
+                      Delete permanently
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
@@ -329,7 +383,7 @@ export function TaskDrawer({
                 </div>
 
                 <div className="space-y-2">
-                  {["status", "priority", "assignee", "due", "start", "labels", "estimate", "repeat"].map(
+                  {["status", "priority", "media", "assignee", "due", "start", "labels", "estimate", "repeat"].map(
                     (row, index) => (
                       <div
                         key={row}
@@ -443,6 +497,35 @@ export function TaskDrawer({
           </div>
         </ScrollArea>
       </SheetContent>
+
+      <AlertDialog open={isConfirmingDelete} onOpenChange={setConfirmingDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {task?.title ?? "this task"} permanently?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the task and its subtasks, comments and time entries.
+              It cannot be undone. If you only want it off the board, archive it
+              instead — that is reversible and still counts towards your totals.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteTask.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleteTask.isPending}
+              onClick={remove}
+            >
+              {deleteTask.isPending ? <Spinner /> : null}
+              Delete permanently
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

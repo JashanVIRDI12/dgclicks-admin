@@ -4,6 +4,7 @@ import type {
   BoardIcon,
   BoardAccessMode,
   LabelColor,
+  MediaType,
   RecurrenceFrequency,
   TaskPriority,
 } from "@/features/tasks/constants";
@@ -112,6 +113,8 @@ export type Task = {
   description: string | null;
   position: number;
   priority: TaskPriority;
+  /** What the content is: reel, photo, carousel… `none` when not content. */
+  mediaType: MediaType;
   assignee: UserSummary | null;
   /**
    * Who handed the task to its assignee. Null when nobody is assigned.
@@ -132,6 +135,12 @@ export type Task = {
   runningTimer: { user: UserSummary | null; startedAt: string } | null;
   recurrence: RecurrenceRule | null;
   completedAt: string | null;
+  /**
+   * When the artwork was finished, and by whom. Null while it is still with
+   * the designer. Independent of `completedAt`, which is the post going out.
+   */
+  assetReadyAt: string | null;
+  assetReadyBy: UserSummary | null;
   archivedAt: string | null;
   commentCount: number;
   attachmentCount: number;

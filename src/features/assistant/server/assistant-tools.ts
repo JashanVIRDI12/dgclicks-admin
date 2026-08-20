@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { AuthenticatedSession } from "@/features/auth/server/session";
 import { getSessionRole } from "@/features/auth/server/session";
 import { listTeamMembers } from "@/features/auth/server/users.service";
+import { getWorkspaceSignals } from "@/features/tasks/server/intelligence.service";
 import {
   forgetMemory,
   MEMORY_TYPES,
@@ -37,6 +38,7 @@ import {
   removeChecklistItemAction,
   removeTimeEntryAction,
   setTaskArchivedAction,
+  setTaskAssetReadyAction,
   setTaskCompleteAction,
   setTaskRecurrenceAction,
   startTimerAction,
@@ -57,6 +59,7 @@ import {
   DEFAULT_BOARD_ICON,
   DEFAULT_LABEL_COLOR,
   LABEL_COLORS,
+  MEDIA_TYPES,
   RECURRENCE_FREQUENCIES,
   TASK_PRIORITIES,
 } from "@/features/tasks/constants";
@@ -202,6 +205,40 @@ const tools = [
       }
 
       return { payload: { ok: true, data: await listTeamMembers() } };
+    },
+  }),
+  /**
+   * Signals, not opinions.
+   *
+   * Every number this returns is counted from the database by
+   * `getWorkspaceSignals`. The model is deliberately not asked to work out
+   * what "stalled" means or to eyeball a board and judge momentum — asked to
+   * do that it will produce a confident paragraph from nothing, and a wrong
+   * insight is worse than none because people act on it.
+   */
+  defineTool({
+    name: "analyse_workspace",
+    description:
+      "Real signals about the active workspace: overdue and approaching deadlines, stalled work, unassigned and urgent-unassigned tasks, per-person open workload, boards that have gone quiet. Call this for open questions like \"what needs attention\", \"what should I work on\", \"how is the team doing\", or before recommending priorities. Every figure is counted from the database — report them, do not estimate or embellish them.",
+    input: emptyInput,
+    execute: async (_input, { session, context }) => {
+      if (!context.workspaceId) {
+        return {
+          payload: { ok: false, error: "No workspace is active." },
+        };
+      }
+
+      // Both reads are viewer-scoped: `listBoards` applies the private-board
+      // filter, so a board this user cannot see contributes to none of the
+      // numbers below and cannot be named in the result.
+      const [workspace, boards] = await Promise.all([
+        getWorkspaceById(context.workspaceId),
+        listBoards(context.workspaceId, session.user.id),
+      ]);
+
+      const signals = await getWorkspaceSignals(boards, workspace.members);
+
+      return { payload: { ok: true, data: signals } };
     },
   }),
   /**
@@ -590,6 +627,7 @@ const tools = [
       parentId: objectId.optional(),
       description: z.string().trim().max(20_000).nullable().optional(),
       priority: z.enum(TASK_PRIORITIES).optional(),
+      mediaType: z.enum(MEDIA_TYPES).optional(),
       assigneeId: objectId.nullable().optional(),
       startDate: z.iso.datetime().nullable().optional(),
       dueDate: z.iso.datetime().nullable().optional(),
@@ -617,6 +655,7 @@ const tools = [
       title: z.string().trim().min(1).max(200).optional(),
       description: z.string().trim().max(20_000).nullable().optional(),
       priority: z.enum(TASK_PRIORITIES).optional(),
+      mediaType: z.enum(MEDIA_TYPES).optional(),
       assigneeId: objectId.nullable().optional(),
       startDate: z.iso.datetime().nullable().optional(),
       dueDate: z.iso.datetime().nullable().optional(),
@@ -669,6 +708,18 @@ const tools = [
           ? { celebration: "task_completed" as const }
           : {}),
       });
+    },
+  }),
+  defineTool({
+    name: "set_task_asset_ready",
+    description:
+      "Mark a post's artwork as made by the designer, or hand it back. Separate from completing the task: artwork being ready and the post going out are different events, and this does not move the card.",
+    input: z.object({ id: objectId, isReady: z.boolean() }),
+    execute: async ({ id, isReady }) => {
+      const task = await getTaskDetail(id);
+      return (task.assetReadyAt !== null) === isReady
+        ? { payload: { ok: true, data: task, unchanged: true } }
+        : actionResult(setTaskAssetReadyAction({ id, isReady }));
     },
   }),
   defineTool({

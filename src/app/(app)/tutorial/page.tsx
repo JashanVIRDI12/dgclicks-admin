@@ -1,6 +1,7 @@
 import {
   CalendarDaysIcon,
   CheckSquareIcon,
+  ClapperboardIcon,
   KanbanIcon,
   KeyboardIcon,
   LayersIcon,
@@ -40,6 +41,7 @@ const CONTENTS = [
   { id: "checklists", label: "Checklists and subtasks" },
   { id: "repeat", label: "Repeating work" },
   { id: "views", label: "Four views" },
+  { id: "content", label: "The content calendar" },
   { id: "files", label: "Files and time" },
   { id: "search", label: "Search" },
   { id: "keyboard", label: "Keyboard" },
@@ -135,12 +137,14 @@ export default async function TutorialPage() {
             so it cannot lock them out.
           </p>
 
-          <Note title="People join by invite link">
+          <Note title="Two ways in">
             The members list shows this workspace and nobody else — it is a
             record of who is here, not a directory of everyone with an account.
-            To bring somebody in, a manager sends them an invite link from
-            Settings. Removing a member drops any management they had along with
-            them.
+            To bring somebody in, a manager uses <strong>Add people</strong> in
+            Settings, which searches everyone who has already signed in and adds
+            them straight away. Somebody without an account yet gets an invite
+            link instead, from the same page. Removing a member drops any
+            management they had along with them.
           </Note>
 
           <Note title="A board can be narrower than its workspace">
@@ -336,6 +340,54 @@ export default async function TutorialPage() {
             Nothing reloads when you switch, and your filters carry across. The
             view is in the address bar, so a link you send opens the way you
             were looking at it.
+          </p>
+        </Section>
+
+        <Section
+          id="content"
+          icon={ClapperboardIcon}
+          title="The content calendar"
+          lede="A separate world for social media: clients, posts and the designer hand-off."
+        >
+          <Note title="Nothing here is a task">
+            Content lives on its own. A post is not a card on a board, it has no
+            column and no position, and it never appears on the Dashboard, in My
+            Tasks, in Reports or in the activity feed. That is deliberate — a
+            post has a client, a format and a designer, none of which mean
+            anything on a kanban board.
+          </Note>
+
+          <p className="text-sm text-pretty text-muted-foreground">
+            <strong className="text-foreground">Add a client first.</strong>{" "}
+            Every post belongs to one company, and the colour you give them is
+            what separates four clients sharing a Tuesday. Retiring a client
+            keeps their posts — a finished retainer is not a reason to delete a
+            year of history.
+          </p>
+
+          <Steps
+            items={[
+              "Click any day on the month grid, or press New post.",
+              "Write the heading, pick the type of content — reel, story, carousel, GIF, video, photo, graphic or copy — and say which client it is for.",
+              "Add the caption, and a reference if there is one: a link to a post it should look like, or just a note.",
+              "Name the designer, and leave the stage on Planned.",
+            ]}
+          />
+
+          <Note title="Ready to post is the hand-off">
+            The stage runs Planned → With designer → Ready to post → Posted.
+            When the designer has made the artwork they move it to{" "}
+            <strong>Ready to post</strong>, and the post records who did that and
+            when. On the grid a Ready post is the one that stands out, so the
+            person scheduling can see at a glance what they can actually put out.
+          </Note>
+
+          <p className="text-sm text-pretty text-muted-foreground">
+            The month is in the address bar, so a link to September opens on
+            September and the back button walks through the months you looked
+            at. Filter by client or by stage to narrow the grid — the counter
+            beside the filters says how many posts are showing and how many of
+            them are not made yet.
           </p>
         </Section>
 

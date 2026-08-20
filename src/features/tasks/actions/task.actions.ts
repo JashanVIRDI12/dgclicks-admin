@@ -17,6 +17,7 @@ import {
   logTimeSchema,
   moveTaskSchema,
   removeChecklistItemSchema,
+  setTaskAssetReadySchema,
   setTaskCompleteSchema,
   setTaskRecurrenceSchema,
   taskIdSchema,
@@ -51,6 +52,7 @@ import {
   removeChecklistItem,
   removeTimeEntry,
   setTaskArchived,
+  setTaskAssetReady,
   setTaskComplete,
   startTimer,
   stopTimer,
@@ -67,6 +69,7 @@ function revalidateTaskScope(boardId: string): void {
   revalidatePath("/dashboard");
   revalidatePath("/my-tasks");
   revalidatePath("/calendar");
+  revalidatePath("/content");
   revalidatePath("/activity");
 }
 
@@ -75,6 +78,7 @@ function auditShape(task: Task) {
   return {
     title: task.title,
     priority: task.priority,
+    mediaType: task.mediaType,
     assignee: task.assignee?.name ?? null,
     dueDate: task.dueDate,
     startDate: task.startDate,
@@ -145,6 +149,7 @@ export const updateTaskAction = createAction({
       changes: diffFields(auditShape(before), auditShape(task), [
         "title",
         "priority",
+        "mediaType",
         "assignee",
         "dueDate",
         "startDate",
@@ -251,6 +256,49 @@ export const setTaskCompleteAction = createAction({
       entityId: task.id,
       entityLabel: task.title,
       boardId,
+    });
+
+    revalidateTaskScope(boardId);
+    return task;
+  },
+});
+
+/**
+ * The designer's hand-off.
+ *
+ * Board edit access, not `assertTaskOwnerAccess`: marking the artwork done is
+ * the same kind of act as dragging a card into Done, and a designer who picked
+ * up a colleague's post should not be locked out of saying so. Recorded as an
+ * `updated` entry rather than a new verb, so the activity vocabulary stays the
+ * small closed set the feed renders from.
+ */
+export const setTaskAssetReadyAction = createAction({
+  auth: true,
+  input: setTaskAssetReadySchema,
+  handler: async ({ input, session }): Promise<Task> => {
+    const existing = await assertTaskEditAccess(input.id, session.user.id);
+    const boardId = existing.board.toString();
+
+    const task = await setTaskAssetReady(
+      input.id,
+      input.isReady,
+      session.user.id,
+    );
+
+    await recordActivity({
+      actorId: session.user.id,
+      action: "updated",
+      entityType: "task",
+      entityId: task.id,
+      entityLabel: task.title,
+      boardId,
+      changes: [
+        {
+          field: "artwork",
+          from: null,
+          to: input.isReady ? "made" : "back with the designer",
+        },
+      ],
     });
 
     revalidateTaskScope(boardId);

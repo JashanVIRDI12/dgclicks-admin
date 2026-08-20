@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   BOARD_LABEL_LIMIT,
   LIMITS,
+  MEDIA_TYPES,
   RECURRENCE_FREQUENCIES,
   SUBTASK_CREATE_LIMIT,
   TASK_PRIORITIES,
@@ -68,6 +69,7 @@ export const taskFieldsSchema = z.object({
   title: taskTitleSchema,
   description: taskDescriptionSchema.nullable(),
   priority: z.enum(TASK_PRIORITIES),
+  mediaType: z.enum(MEDIA_TYPES),
   assigneeId: objectId.nullable(),
   startDate: dateInput.nullable(),
   dueDate: dateInput.nullable(),
@@ -182,6 +184,7 @@ export const createTaskFormSchema = z
     title: taskTitleSchema,
     description: taskDescriptionSchema,
     priority: z.enum(TASK_PRIORITIES),
+    mediaType: z.enum(MEDIA_TYPES),
     assigneeId: objectId.nullable(),
     startDate: optionalDateString,
     dueDate: optionalDateString,
@@ -241,6 +244,12 @@ export const moveTaskSchema = z.object({
 export const setTaskCompleteSchema = z.object({
   id: objectId,
   isComplete: z.boolean(),
+});
+
+/** The designer's half of a content card: is the artwork made yet. */
+export const setTaskAssetReadySchema = z.object({
+  id: objectId,
+  isReady: z.boolean(),
 });
 
 export const setTaskRecurrenceSchema = z.object({

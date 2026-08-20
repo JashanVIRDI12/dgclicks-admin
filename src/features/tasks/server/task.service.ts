@@ -8,6 +8,7 @@ import { isAdminUser } from "@/features/auth/server/users.service";
 import {
   ARCHIVE_COMPLETED_AFTER_HOURS,
   TASK_SEARCH_LIMIT,
+  type MediaType,
   type TaskPriority,
 } from "@/features/tasks/constants";
 import {
@@ -45,6 +46,7 @@ export type TaskPatch = {
   title?: string;
   description?: string | null;
   priority?: TaskPriority;
+  mediaType?: MediaType;
   assigneeId?: string | null;
   startDate?: Date | null;
   dueDate?: Date | null;
@@ -275,6 +277,7 @@ export async function createTask(
     title: string;
     description?: string | null;
     priority?: TaskPriority;
+    mediaType?: MediaType;
     assigneeId?: string | null;
     startDate?: Date | null;
     dueDate?: Date | null;
@@ -315,6 +318,7 @@ export async function createTask(
     description: input.description ?? null,
     position: positionAfter(last?.position ?? null),
     priority: input.priority ?? "none",
+    mediaType: input.mediaType ?? "none",
     assignee: input.assigneeId ? new Types.ObjectId(input.assigneeId) : null,
     assignedBy: input.assigneeId ? new Types.ObjectId(createdById) : null,
     // Embedded, so this is part of the same insert rather than a second write.
@@ -399,6 +403,10 @@ export async function updateTask(
 
   if (patch.priority !== undefined) {
     update.priority = patch.priority;
+  }
+
+  if (patch.mediaType !== undefined) {
+    update.mediaType = patch.mediaType;
   }
 
   if (patch.startDate !== undefined) {
@@ -506,6 +514,42 @@ export async function moveTask(
  * Completion and column are two views of the same fact, so setting one has to
  * set the other or the board immediately contradicts the checkbox.
  */
+/**
+ * Marks the artwork for a post finished, or hands it back to the designer.
+ *
+ * Separate from `setTaskComplete` and deliberately does not move the card. The
+ * designer finishing the asset and the post going live are different events —
+ * often days apart — so this records one without asserting the other. The card
+ * stays in whatever column its owner put it in.
+ *
+ * Who is credited is taken from the caller rather than a parameter, so the name
+ * on the card is always someone who actually pressed the button.
+ */
+export async function setTaskAssetReady(
+  id: string,
+  isReady: boolean,
+  actorId: string,
+): Promise<Task> {
+  await connectToDatabase();
+
+  const updated = await TaskModel.findByIdAndUpdate(
+    id,
+    {
+      assetReadyAt: isReady ? new Date() : null,
+      assetReadyBy: isReady ? new Types.ObjectId(actorId) : null,
+    },
+    { new: true },
+  )
+    .select("_id")
+    .lean<{ _id: Types.ObjectId }>();
+
+  if (!updated) {
+    throw new NotFoundError("That task no longer exists.");
+  }
+
+  return getTaskById(id);
+}
+
 export async function setTaskComplete(
   id: string,
   boardId: string,

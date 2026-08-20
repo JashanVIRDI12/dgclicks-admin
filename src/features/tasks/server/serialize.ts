@@ -8,6 +8,7 @@ import type {
   BoardIcon,
   BoardAccessMode,
   LabelColor,
+  MediaType,
   RecurrenceFrequency,
   TaskPriority,
 } from "@/features/tasks/constants";
@@ -215,6 +216,7 @@ type TaskSource = {
   description?: string | null;
   position: number;
   priority: string;
+  mediaType?: string;
   assignee?: unknown;
   assignedBy?: unknown;
   startDate?: Date | null;
@@ -226,6 +228,8 @@ type TaskSource = {
   runningTimer?: { user: unknown; startedAt: Date } | null;
   recurrence?: RecurrenceSource | null;
   completedAt?: Date | null;
+  assetReadyAt?: Date | null;
+  assetReadyBy?: unknown;
   archivedAt?: Date | null;
   commentCount: number;
   attachmentCount: number;
@@ -243,6 +247,9 @@ export function toTask(doc: TaskSource): Task {
     description: doc.description ?? null,
     position: doc.position,
     priority: doc.priority as TaskPriority,
+    // Defaulted rather than asserted: tasks written before this field existed
+    // carry no value, and a board should not break over a missing enum.
+    mediaType: (doc.mediaType ?? "none") as MediaType,
     assignee: toUserSummary(doc.assignee as Parameters<typeof toUserSummary>[0]),
     assignedBy: toUserSummary(
       doc.assignedBy as Parameters<typeof toUserSummary>[0],
@@ -273,6 +280,10 @@ export function toTask(doc: TaskSource): Task {
       : null,
     recurrence: toRecurrence(doc.recurrence),
     completedAt: toIso(doc.completedAt),
+    assetReadyAt: toIso(doc.assetReadyAt),
+    assetReadyBy: toUserSummary(
+      doc.assetReadyBy as Parameters<typeof toUserSummary>[0],
+    ),
     archivedAt: toIso(doc.archivedAt),
     commentCount: doc.commentCount,
     attachmentCount: doc.attachmentCount,

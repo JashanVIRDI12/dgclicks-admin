@@ -120,6 +120,45 @@ export async function buildAssistantContext(
     ),
   );
 
+  /**
+   * Where this person's attention actually goes.
+   *
+   * A flat list of every board they can see says nothing about which ones they
+   * work in. Somebody who lives on SEO and has never opened Design should get
+   * answers weighted that way, and "what should I do?" should not treat a board
+   * they touch daily and one they were added to in March as equally likely.
+   *
+   * Derived from work already fetched above — no extra queries — by counting
+   * their open tasks per board.
+   */
+  const byBoard = new Map<string, number>();
+
+  for (const task of [
+    ...work.assignedToMe,
+    ...work.overdue,
+    ...work.dueToday,
+  ]) {
+    byBoard.set(task.boardId, (byBoard.get(task.boardId) ?? 0) + 1);
+  }
+
+  const focus = [...byBoard.entries()]
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([boardId, count]) => {
+      const board = boards.find((candidate) => candidate.id === boardId);
+      return board ? `- ${board.name}: ${count} open` : null;
+    })
+    .filter((line): line is string => line !== null);
+
+  if (focus.length > 0) {
+    lines.push(
+      "",
+      "### Where their work actually is",
+      "Weight suggestions towards these boards unless they ask about another.",
+      ...focus,
+    );
+  }
+
   lines.push(
     "",
     "## This user's own work",

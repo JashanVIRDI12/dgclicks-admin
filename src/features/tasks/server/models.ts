@@ -9,6 +9,7 @@ import {
   DEFAULT_LABEL_COLOR,
   LABEL_COLORS,
   LIMITS,
+  MEDIA_TYPES,
   RECURRENCE_FREQUENCIES,
   TASK_PRIORITIES,
 } from "@/features/tasks/constants";
@@ -324,6 +325,13 @@ const taskSchema = new Schema(
       default: "none",
     },
     assignee: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    /** What this piece of content is. `none` for work that is not content. */
+    mediaType: {
+      type: String,
+      enum: MEDIA_TYPES,
+      required: true,
+      default: "none",
+    },
     /**
      * Who handed the task to its assignee. Cleared alongside the assignee, so it
      * can never name the person who set an assignment that no longer exists.
@@ -347,6 +355,18 @@ const taskSchema = new Schema(
     /** Links every occurrence of a repeating task back to the first one. */
     recurrenceRoot: { type: Schema.Types.ObjectId, ref: "Task", default: null },
     completedAt: { type: Date, default: null },
+    /**
+     * When the artwork for this post was finished.
+     *
+     * A second axis, not a second name for `completedAt`. The designer
+     * finishing the asset and the post actually going out are different
+     * events on different days, and a board column can only express one of
+     * them at a time — so a card can sit in Scheduled and still say whether
+     * its art exists.
+     */
+    assetReadyAt: { type: Date, default: null },
+    /** Who marked the artwork done. Cleared alongside `assetReadyAt`. */
+    assetReadyBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     archivedAt: { type: Date, default: null },
     /**
      * Denormalised so the board query stays a single read. Maintained by the

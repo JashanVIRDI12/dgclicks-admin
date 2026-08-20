@@ -200,6 +200,45 @@ export const LIMITS = {
  */
 export const ARCHIVE_COMPLETED_AFTER_HOURS = 24;
 
+/**
+ * What a piece of content physically is.
+ *
+ * A closed enum rather than a label, even though labels already exist and
+ * would have cost nothing. Three reasons: labels are per-board, so every
+ * client board would need its own copy of the same seven; they are free text,
+ * so "Reel", "reel" and "REEL" drift apart within a week; and the calendar
+ * needs to filter and group by this across boards, which only works if every
+ * board agrees on the vocabulary.
+ *
+ * `none` exists so a task that is not a piece of content — a meeting, an
+ * approval — does not have to pretend to be one.
+ */
+export const MEDIA_TYPES = [
+  "none",
+  "photo",
+  "video",
+  "reel",
+  "story",
+  "carousel",
+  "gif",
+  "graphic",
+  "copy",
+] as const;
+
+export type MediaType = (typeof MEDIA_TYPES)[number];
+
+export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
+  none: "No media",
+  photo: "Photo",
+  video: "Video",
+  reel: "Reel",
+  story: "Story",
+  carousel: "Carousel",
+  gif: "GIF",
+  graphic: "Graphic",
+  copy: "Copy only",
+};
+
 export const BOARD_LABEL_LIMIT = 40;
 export const TASK_SEARCH_LIMIT = 8;
 

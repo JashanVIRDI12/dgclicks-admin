@@ -5,7 +5,11 @@ import { Types } from "mongoose";
 import { ActivityModel } from "@/features/activity/server/activity.model";
 import { USER_SUMMARY_SELECT } from "@/features/auth/server/serialize";
 import { UserModel } from "@/features/auth/server/user.model";
-import { isAdminUser } from "@/features/auth/server/users.service";
+import {
+  isAdminUser,
+  listTeamMembers,
+  type TeamMember,
+} from "@/features/auth/server/users.service";
 import { deleteWorkspaceBoards } from "@/features/tasks/server/deletion.service";
 import {
   WorkspaceModel,
@@ -188,6 +192,88 @@ export async function updateWorkspace(
     id,
     { name: input.name },
     { new: true, runValidators: true },
+  )
+    .select("_id")
+    .lean<{ _id: Types.ObjectId }>();
+
+  if (!updated) {
+    throw new NotFoundError("That workspace no longer exists.");
+  }
+
+  return getWorkspaceById(id);
+}
+
+/**
+ * Accounts that could join this workspace but have not.
+ *
+ * An invite link is the right answer for someone who has never signed in. For
+ * someone who already has an account it is the long way round — they follow a
+ * URL to be told they are already registered — so a manager can add them
+ * directly instead.
+ *
+ * Every account is returned rather than a server-side search, because the whole
+ * list is one small query and filtering it in the browser is what makes typing
+ * a name feel instant. If this ever grows past a few hundred accounts it should
+ * become a query with a term; until then a round trip per keystroke would be
+ * slower for no benefit.
+ */
+export async function listAddableUsers(
+  workspaceId: string,
+): Promise<TeamMember[]> {
+  await connectToDatabase();
+
+  const workspace = await WorkspaceModel.findById(workspaceId)
+    .select("members")
+    .lean<{ members?: Types.ObjectId[] }>();
+
+  if (!workspace) {
+    throw new NotFoundError("That workspace no longer exists.");
+  }
+
+  const members = new Set((workspace.members ?? []).map((id) => id.toString()));
+
+  return (await listTeamMembers()).filter((user) => !members.has(user.id));
+}
+
+/**
+ * Adds people without touching anyone already in.
+ *
+ * Deliberately not `setWorkspaceMembers` with the existing ids appended: that
+ * sends the whole list, so two managers adding someone at the same moment would
+ * each overwrite the other's addition with the list they loaded. `$addToSet`
+ * has no such window and is idempotent, which also makes adding someone who
+ * joined via a link a no-op rather than an error.
+ */
+export async function addWorkspaceMembers(
+  id: string,
+  memberIds: string[],
+): Promise<Workspace> {
+  await connectToDatabase();
+
+  const uniqueIds = [...new Set(memberIds)];
+
+  if (uniqueIds.length === 0) {
+    return getWorkspaceById(id);
+  }
+
+  const found = await UserModel.countDocuments({ _id: { $in: uniqueIds } });
+
+  if (found !== uniqueIds.length) {
+    throw new ValidationError("Please check the selected people.", {
+      memberIds: ["One or more of those people no longer exist."],
+    });
+  }
+
+  const updated = await WorkspaceModel.findByIdAndUpdate(
+    id,
+    {
+      $addToSet: {
+        members: {
+          $each: uniqueIds.map((memberId) => new Types.ObjectId(memberId)),
+        },
+      },
+    },
+    { new: true },
   )
     .select("_id")
     .lean<{ _id: Types.ObjectId }>();

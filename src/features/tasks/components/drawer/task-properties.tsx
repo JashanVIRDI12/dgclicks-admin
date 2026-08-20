@@ -4,9 +4,13 @@ import { format } from "date-fns";
 import {
   CalendarClockIcon,
   CalendarIcon,
+  CheckCircle2Icon,
+  CircleDashedIcon,
   CircleDotIcon,
+  ClapperboardIcon,
   FlagIcon,
   GaugeIcon,
+  PaletteIcon,
   RepeatIcon,
   TagIcon,
   UserCheckIcon,
@@ -37,15 +41,22 @@ import { RecurrenceEditor } from "@/features/tasks/components/drawer/recurrence-
 import {
   AssigneeAvatar,
   formatDuration,
+  MediaTypeIcon,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
 import {
+  MEDIA_TYPES,
+  MEDIA_TYPE_LABELS,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
+  type MediaType,
   type TaskPriority,
 } from "@/features/tasks/constants";
 import { parseDuration } from "@/features/tasks/components/drawer/time-section";
-import { useUpdateTask } from "@/features/tasks/hooks/use-board";
+import {
+  useSetTaskAssetReady,
+  useUpdateTask,
+} from "@/features/tasks/hooks/use-board";
 import type { Label, TaskDetail } from "@/features/tasks/types";
 import { cn } from "@/lib/utils";
 
@@ -168,6 +179,7 @@ export function TaskProperties({
   members: UserSummary[];
 }) {
   const update = useUpdateTask(boardId);
+  const assetReady = useSetTaskAssetReady(boardId);
   const [estimateDraft, setEstimateDraft] = useState(
     task.estimateMinutes ? formatDuration(task.estimateMinutes) : "",
   );
@@ -232,6 +244,64 @@ export function TaskProperties({
           </SelectContent>
         </Select>
       </Row>
+
+      <Row icon={ClapperboardIcon} label="Media">
+        <Select
+          value={task.mediaType}
+          onValueChange={(value) =>
+            update.mutate({ id: task.id, mediaType: value as MediaType })
+          }
+        >
+          <SelectTrigger size="sm" className={BARE_CONTROL} aria-label="Media type">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MEDIA_TYPES.map((mediaType) => (
+              <SelectItem key={mediaType} value={mediaType}>
+                <MediaTypeIcon mediaType={mediaType} />
+                {MEDIA_TYPE_LABELS[mediaType]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Row>
+
+      {task.mediaType !== "none" ? (
+        <Row icon={PaletteIcon} label="Artwork">
+          <div className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1">
+            <Button
+              variant={task.assetReadyAt ? "secondary" : "outline"}
+              size="sm"
+              className="h-7"
+              disabled={assetReady.isPending}
+              onClick={() =>
+                assetReady.mutate({
+                  id: task.id,
+                  isReady: task.assetReadyAt === null,
+                })
+              }
+            >
+              {task.assetReadyAt ? (
+                <CheckCircle2Icon className="size-3.5" aria-hidden="true" />
+              ) : (
+                <CircleDashedIcon className="size-3.5" aria-hidden="true" />
+              )}
+              {task.assetReadyAt ? "Made" : "Mark as made"}
+            </Button>
+
+            {task.assetReadyAt ? (
+              <span className="text-xs text-muted-foreground">
+                {task.assetReadyBy ? `${task.assetReadyBy.name}, ` : ""}
+                {format(new Date(task.assetReadyAt), "d MMM")}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Still with the designer
+              </span>
+            )}
+          </div>
+        </Row>
+      ) : null}
 
       <Row icon={UserIcon} label="Assignee">
         <Select

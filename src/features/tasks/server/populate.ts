@@ -22,11 +22,15 @@ export const TASK_POPULATE: PopulateOptions[] = [
   { path: "assignee", select: USER_SUMMARY_SELECT },
   { path: "labels", select: "board name color" },
   { path: "assignedBy", select: USER_SUMMARY_SELECT },
+  // On the card read rather than the drawer's, because the content calendar
+  // renders it: "still with Rahul" is the whole point of that screen, and
+  // opening every card to find out would defeat it.
+  { path: "assetReadyBy", select: USER_SUMMARY_SELECT },
   { path: "runningTimer.user", select: USER_SUMMARY_SELECT },
 ];
 
 /**
- * `TASK_POPULATE` plus the two things only the drawer reads.
+ * `TASK_POPULATE` plus the one thing only the drawer reads.
  *
  * Kept out of `TASK_POPULATE` on purpose: the board loads every card through
  * that one, and each extra path there is another round trip on the read that has
@@ -34,7 +38,6 @@ export const TASK_POPULATE: PopulateOptions[] = [
  */
 export const TASK_DETAIL_POPULATE: PopulateOptions[] = [
   ...TASK_POPULATE,
-  { path: "assignedBy", select: USER_SUMMARY_SELECT },
   { path: "timeEntries.user", select: USER_SUMMARY_SELECT },
 ];
 

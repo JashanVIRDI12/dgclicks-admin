@@ -1,16 +1,25 @@
 import {
   CalendarClockIcon,
+  CircleDashedIcon,
+  CircleDotIcon,
+  ClapperboardIcon,
+  GalleryHorizontalEndIcon,
+  ImageIcon,
+  PaletteIcon,
+  Repeat2Icon,
   SignalHighIcon,
   SignalIcon,
   SignalLowIcon,
   SignalMediumIcon,
+  TypeIcon,
+  VideoIcon,
   type LucideIcon,
 } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { UserSummary } from "@/features/auth/types";
-import type { TaskPriority } from "@/features/tasks/constants";
+import type { MediaType, TaskPriority } from "@/features/tasks/constants";
 import { cn } from "@/lib/utils";
 
 /**
@@ -52,6 +61,46 @@ export function PriorityIcon({
       style={
         { color: `var(--priority-${priority})` } as CSSProperties
       }
+      aria-hidden="true"
+    />
+  );
+}
+
+/**
+ * The kind of content a card represents.
+ *
+ * Deliberately a glyph and never a bare colour: on a calendar packed with a
+ * month of posts, the shape is what lets someone find every reel at a glance,
+ * and the label is still there in the drawer and in the tooltip.
+ */
+const MEDIA_TYPE_ICONS: Record<MediaType, LucideIcon> = {
+  none: CircleDashedIcon,
+  photo: ImageIcon,
+  video: VideoIcon,
+  reel: ClapperboardIcon,
+  story: CircleDotIcon,
+  carousel: GalleryHorizontalEndIcon,
+  gif: Repeat2Icon,
+  graphic: PaletteIcon,
+  copy: TypeIcon,
+};
+
+export function MediaTypeIcon({
+  mediaType,
+  className,
+}: {
+  mediaType: MediaType;
+  className?: string;
+}) {
+  const Icon = MEDIA_TYPE_ICONS[mediaType];
+
+  return (
+    <Icon
+      className={cn(
+        "size-3.5",
+        mediaType === "none" && "text-muted-foreground/50",
+        className,
+      )}
       aria-hidden="true"
     />
   );

@@ -44,10 +44,13 @@ import type { UserSummary } from "@/features/auth/types";
 import { LabelPicker } from "@/features/tasks/components/drawer/label-picker";
 import {
   AssigneeAvatar,
+  MediaTypeIcon,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
 import {
   LIMITS,
+  MEDIA_TYPES,
+  MEDIA_TYPE_LABELS,
   RECURRENCE_FREQUENCIES,
   RECURRENCE_FREQUENCY_LABELS,
   TASK_PRIORITIES,
@@ -70,6 +73,7 @@ const DEFAULT_VALUES: CreateTaskFormValues = {
   title: "",
   description: "",
   priority: "none",
+  mediaType: "none",
   assigneeId: null,
   startDate: null,
   dueDate: null,
@@ -242,6 +246,7 @@ export function CreateTaskSheet({
         title: values.title,
         description: values.description || null,
         priority: values.priority,
+        mediaType: values.mediaType,
         assigneeId: values.assigneeId,
         startDate: localDate(values.startDate),
         dueDate,
@@ -338,6 +343,30 @@ export function CreateTaskSheet({
                             <SelectItem key={priority} value={priority}>
                               <PriorityIcon priority={priority} />
                               {TASK_PRIORITY_LABELS[priority]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  )}
+                />
+
+
+                <Controller
+                  control={form.control}
+                  name="mediaType"
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor="new-task-media">Media type</FieldLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id="new-task-media" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MEDIA_TYPES.map((mediaType) => (
+                            <SelectItem key={mediaType} value={mediaType}>
+                              <MediaTypeIcon mediaType={mediaType} />
+                              {MEDIA_TYPE_LABELS[mediaType]}
                             </SelectItem>
                           ))}
                         </SelectContent>

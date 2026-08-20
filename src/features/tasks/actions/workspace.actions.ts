@@ -8,10 +8,13 @@ import {
   diffFields,
   recordActivity,
 } from "@/features/activity/server/activity.service";
+import type { UserSummary } from "@/features/auth/types";
 import {
+  addWorkspaceMembersSchema,
   createWorkspaceSchema,
   deleteWorkspaceSchema,
   updateWorkspaceSchema,
+  workspaceIdSchema,
   workspaceManagersSchema,
   workspaceMembersSchema,
 } from "@/features/tasks/schemas/workspace.schema";
@@ -20,11 +23,13 @@ import {
   ACTIVE_WORKSPACE_COOKIE_OPTIONS,
 } from "@/features/tasks/server/active-workspace";
 import {
+  addWorkspaceMembers,
   assertWorkspaceManager,
   assertWorkspaceMember,
   createWorkspace,
   deleteWorkspace,
   getWorkspaceById,
+  listAddableUsers,
   listWorkspacesForUser,
   setWorkspaceManagers,
   setWorkspaceMembers,
@@ -146,6 +151,62 @@ export const setWorkspaceMembersAction = createAction({
  * people can only be changed by someone outside it, which is the situation this
  * permission exists to end. Deleting stays out of their reach; see below.
  */
+/**
+ * Everyone with an account who is not already in this workspace.
+ *
+ * A read behind `createAction` rather than a route handler: it is only ever
+ * called from the add-people picker, and going through the same wrapper means
+ * the manager check and the Zod parse are the ones every other workspace
+ * operation uses.
+ */
+export const listWorkspaceCandidatesAction = createAction({
+  auth: true,
+  input: workspaceIdSchema,
+  handler: async ({ input, session }): Promise<UserSummary[]> => {
+    await assertWorkspaceManager(input.id, session.user.id);
+
+    return listAddableUsers(input.id);
+  },
+});
+
+export const addWorkspaceMembersAction = createAction({
+  auth: true,
+  input: addWorkspaceMembersSchema,
+  handler: async ({ input, session }): Promise<Workspace> => {
+    await assertWorkspaceManager(input.id, session.user.id);
+
+    const before = await getWorkspaceById(input.id);
+    const workspace = await addWorkspaceMembers(input.id, input.memberIds);
+
+    const existing = new Set(before.members.map((member) => member.id));
+    const added = workspace.members.filter(
+      (member) => !existing.has(member.id),
+    );
+
+    // Named rather than counted: "added 2 members" is the one entry nobody can
+    // act on, and who joined a workspace is exactly what an audit trail is for.
+    if (added.length > 0) {
+      await recordActivity({
+        actorId: session.user.id,
+        action: "updated",
+        entityType: "workspace",
+        entityId: workspace.id,
+        entityLabel: workspace.name,
+        changes: [
+          {
+            field: "members",
+            from: null,
+            to: `added ${added.map((member) => member.name).join(", ")}`,
+          },
+        ],
+      });
+    }
+
+    revalidateWorkspaceScope();
+    return workspace;
+  },
+});
+
 export const setWorkspaceManagersAction = createAction({
   auth: true,
   input: workspaceManagersSchema,

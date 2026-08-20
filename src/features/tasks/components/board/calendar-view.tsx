@@ -23,12 +23,16 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { LabelDot } from "@/features/tasks/components/label-chip";
-import { PriorityIcon } from "@/features/tasks/components/task-meta";
+import {
+  MediaTypeIcon,
+  PriorityIcon,
+} from "@/features/tasks/components/task-meta";
+import { MEDIA_TYPE_LABELS } from "@/features/tasks/constants";
 import type { Task } from "@/features/tasks/types";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +78,24 @@ function DayTask({
         isDragging && "opacity-30",
       )}
     >
-      <PriorityIcon priority={task.priority} className="size-3 shrink-0" />
+      {task.mediaType === "none" ? (
+        <PriorityIcon priority={task.priority} className="size-3 shrink-0" />
+      ) : (
+        <span
+          className="flex shrink-0 items-center gap-0.5"
+          title={
+            task.assetReadyAt
+              ? `${MEDIA_TYPE_LABELS[task.mediaType]} — artwork made`
+              : `${MEDIA_TYPE_LABELS[task.mediaType]} — artwork still with the designer`
+          }
+        >
+          <MediaTypeIcon mediaType={task.mediaType} className="size-3" />
+          <CircleIcon
+            className={cn("size-1.5", task.assetReadyAt && "fill-current")}
+            aria-hidden="true"
+          />
+        </span>
+      )}
       {task.labels[0] ? <LabelDot color={task.labels[0].color} /> : null}
       <span
         className={cn("truncate", task.completedAt && "line-through")}

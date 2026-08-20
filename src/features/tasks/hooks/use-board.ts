@@ -19,11 +19,13 @@ import {
   deleteTaskAction,
   moveTaskAction,
   setTaskCompleteAction,
+  setTaskAssetReadyAction,
   setTaskRecurrenceAction,
   updateTaskAction,
 } from "@/features/tasks/actions/task.actions";
 import type {
   LabelColor,
+  MediaType,
   TaskPriority,
 } from "@/features/tasks/constants";
 import { celebrateTaskCompletion } from "@/features/tasks/components/task-celebration";
@@ -52,6 +54,7 @@ export type TaskPatchInput = {
   title?: string;
   description?: string | null;
   priority?: TaskPriority;
+  mediaType?: MediaType;
   assigneeId?: string | null;
   startDate?: Date | null;
   dueDate?: Date | null;
@@ -299,6 +302,9 @@ export function useUpdateTask(boardId: string) {
           ? { description: input.description }
           : {}),
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
+        ...(input.mediaType !== undefined
+          ? { mediaType: input.mediaType }
+          : {}),
         ...(input.dueDate !== undefined
           ? { dueDate: input.dueDate?.toISOString() ?? null }
           : {}),
@@ -367,6 +373,53 @@ export function useSetTaskComplete(boardId: string) {
       if (input.isComplete && !wasComplete) {
         celebrateTaskCompletion();
       }
+    },
+    onSettled: (_data, _error, input) => {
+      void queryClient.invalidateQueries({ queryKey: boardKey(boardId) });
+      void queryClient.invalidateQueries({
+        queryKey: taskWorkspaceKey(input.id),
+      });
+    },
+  });
+}
+
+/**
+ * The designer's hand-off, optimistic like every other card mutation.
+ *
+ * The date is echoed locally but the name is not: who gets credited is decided
+ * on the server from the session, and guessing it here would briefly show a
+ * name that the save might not agree with.
+ */
+export function useSetTaskAssetReady(boardId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { id: string; isReady: boolean }) => {
+      const result = await setTaskAssetReadyAction(input);
+
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+
+      return result.data;
+    },
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: boardKey(boardId) });
+
+      const previous = patchTask(queryClient, boardId, input.id, (task) => ({
+        ...task,
+        assetReadyAt: input.isReady ? new Date().toISOString() : null,
+        assetReadyBy: input.isReady ? task.assetReadyBy : null,
+      }));
+
+      return { previous };
+    },
+    onError: (error, _input, context) => {
+      restore(queryClient, boardId, context?.previous);
+      toast.error(error.message);
+    },
+    onSuccess: (task) => {
+      syncTaskCaches(queryClient, boardId, task);
     },
     onSettled: (_data, _error, input) => {
       void queryClient.invalidateQueries({ queryKey: boardKey(boardId) });
@@ -557,6 +610,7 @@ export function useCreateTask(boardId: string) {
       listId?: string;
       description?: string | null;
       priority?: TaskPriority;
+      mediaType?: MediaType;
       assigneeId?: string | null;
       startDate?: Date | null;
       dueDate?: Date | null;

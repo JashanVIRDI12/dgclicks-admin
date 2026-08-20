@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LayoutGridIcon, PlusIcon } from "lucide-react";
+import { LayoutGridIcon, PlusIcon, SparklesIcon } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,6 +16,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { ASSISTANT_STARTERS } from "@/features/assistant/prompts";
 import { navigation } from "@/config/navigation";
 import { BOARD_ICON_COMPONENTS } from "@/features/tasks/components/board-icon";
 import { BoardFormDialog } from "@/features/tasks/components/board-form-dialog";
@@ -64,6 +65,7 @@ export function CommandPalette({
   const router = useRouter();
   const isOpen = useUiStore((state) => state.isCommandPaletteOpen);
   const setOpen = useUiStore((state) => state.setCommandPaletteOpen);
+  const askAssistant = useUiStore((state) => state.askAssistant);
 
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -102,6 +104,7 @@ export function CommandPalette({
     router.push(href);
   }
 
+  const trimmedQuery = query.trim();
   const boardNames = new Map(boards.map((board) => [board.id, board.name]));
   const editableBoards = boards.filter(
     (board) => canEditBoard(board, currentUserId, isAdmin),
@@ -132,12 +135,66 @@ export function CommandPalette({
         <CommandInput
           value={query}
           onValueChange={setQuery}
-          placeholder="Search tasks, boards and pages…"
+          placeholder="Search, or ask your workspace anything…"
         />
 
         <CommandList>
-          <CommandEmpty>Nothing matches that.</CommandEmpty>
+          {/*
+            No empty state while a query is typed: the Ask row below always
+            matches, so "Nothing matches that" would be a lie sitting directly
+            above something that does.
+          */}
+          {trimmedQuery ? null : (
+            <CommandEmpty>Nothing matches that.</CommandEmpty>
+          )}
 
+          {/*
+            First, not last. Anything typed here that is not a task or a page
+            is a question, and the palette is already where people type what
+            they want — making the assistant the fallback turns a search box
+            into a command bar without adding a third place to type.
+          */}
+          {trimmedQuery ? (
+            <CommandGroup heading="Ask">
+              <CommandItem
+                value="ask-assistant"
+                onSelect={() => {
+                  setOpen(false);
+                  setQuery("");
+                  askAssistant(trimmedQuery);
+                }}
+              >
+                <SparklesIcon className="size-4" />
+                <span className="truncate">
+                  Ask your workspace: “{trimmedQuery}”
+                </span>
+              </CommandItem>
+            </CommandGroup>
+          ) : null}
+
+          {/*
+            Shown only on an empty palette, where there is room and nothing
+            else to look at. These are the questions people do not think to
+            ask a task manager, so the blank state is the one place worth
+            spending to teach them.
+          */}
+          {trimmedQuery ? null : (
+            <CommandGroup heading="Ask your workspace">
+              {ASSISTANT_STARTERS.map((starter) => (
+                <CommandItem
+                  key={starter.label}
+                  value={`starter-${starter.label}`}
+                  onSelect={() => {
+                    setOpen(false);
+                    askAssistant(starter.prompt);
+                  }}
+                >
+                  <SparklesIcon className="size-4 text-brand" />
+                  {starter.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
           {tasks && tasks.length > 0 ? (
             <CommandGroup heading="Tasks">
               {tasks.map((task) => (

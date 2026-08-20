@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
   CheckSquareIcon,
+  CircleIcon,
   GripVerticalIcon,
   MessageSquareIcon,
   PaperclipIcon,
@@ -14,8 +15,10 @@ import { LabelChip } from "@/features/tasks/components/label-chip";
 import {
   AssigneeAvatar,
   DueDateBadge,
+  MediaTypeIcon,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
+import { MEDIA_TYPE_LABELS } from "@/features/tasks/constants";
 import type { Task } from "@/features/tasks/types";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +49,7 @@ export function TaskCard({
   const isComplete = task.completedAt !== null;
   const hasFooter =
     task.dueDate !== null ||
+    task.mediaType !== "none" ||
     checklist.total > 0 ||
     task.commentCount > 0 ||
     task.attachmentCount > 0 ||
@@ -104,6 +108,35 @@ export function TaskCard({
         <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[0.6875rem] text-muted-foreground">
           {task.dueDate ? (
             <DueDateBadge dueDate={task.dueDate} isComplete={isComplete} />
+          ) : null}
+
+          {task.mediaType !== "none" ? (
+            <span
+              className="inline-flex items-center gap-1"
+              title={
+                task.assetReadyAt
+                  ? `${MEDIA_TYPE_LABELS[task.mediaType]} — artwork made${
+                      task.assetReadyBy ? ` by ${task.assetReadyBy.name}` : ""
+                    }`
+                  : `${MEDIA_TYPE_LABELS[task.mediaType]} — artwork still with the designer`
+              }
+            >
+              <MediaTypeIcon mediaType={task.mediaType} className="size-3" />
+              {MEDIA_TYPE_LABELS[task.mediaType]}
+              {task.assetReadyAt ? (
+                <CircleIcon
+                  className="size-2 fill-current text-foreground"
+                  aria-hidden="true"
+                />
+              ) : (
+                <CircleIcon className="size-2" aria-hidden="true" />
+              )}
+              <span className="sr-only">
+                {task.assetReadyAt
+                  ? "Artwork made"
+                  : "Artwork still with the designer"}
+              </span>
+            </span>
           ) : null}
 
           {task.recurrence ? (

@@ -23,6 +23,8 @@ import { canEditBoard } from "@/features/tasks/permissions";
 import { listBoards } from "@/features/tasks/server/board.service";
 import { getDashboardData } from "@/features/tasks/server/insights.service";
 import { catchUpRecurrences } from "@/features/tasks/server/recurrence.service";
+import { getWorkspaceSignals } from "@/features/tasks/server/intelligence.service";
+import { WorkspaceBriefing } from "@/features/tasks/components/workspace-briefing";
 import { archiveCompletedTasks } from "@/features/tasks/server/task.service";
 
 export const metadata: Metadata = {
@@ -61,9 +63,10 @@ export default async function DashboardPage() {
     archiveCompletedTasks(boardIds),
   ]);
 
-  const [data, activity] = await Promise.all([
+  const [data, activity, signals] = await Promise.all([
     getDashboardData({ userId: session.user.id, boardIds }),
     listActivity({ page: 1, boardIds }),
+    getWorkspaceSignals(boards, active.members),
   ]);
 
   const boardNames = new Map(boards.map((board) => [board.id, board.name]));
@@ -79,6 +82,16 @@ export default async function DashboardPage() {
           completedThisWeek={data.completedThisWeek}
           completedLastWeek={data.completedLastWeek}
         />
+      </FadeIn>
+
+      {/*
+        Above the quick-create and the lists, because it is the part of the
+        page you would want to know about before you started typing — and it
+        renders nothing when there is nothing wrong, so it costs no space on a
+        good day.
+      */}
+      <FadeIn delay={0.04}>
+        <WorkspaceBriefing signals={signals} />
       </FadeIn>
 
       <FadeIn delay={0.05}>

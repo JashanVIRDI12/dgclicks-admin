@@ -103,16 +103,164 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
   return nodes;
 }
 
+/**
+ * A structured card the assistant chose to draw.
+ *
+ * Emitted as a fenced ```card block holding JSON. That is deliberately not the
+ * same as making the whole reply JSON: a model that must return a valid document
+ * every time will eventually not, and the failure mode there is a blank panel.
+ * Here a malformed card is just a fenced block that did not parse, so it renders
+ * as text and the conversation continues.
+ *
+ * Every field is checked at runtime. This content originates from a model and
+ * can quote tasks and comments other people wrote, so nothing about its shape
+ * can be assumed.
+ */
+type Card = {
+  title: string;
+  severity: "high" | "medium" | "low";
+  message?: string;
+  items?: { label: string; href?: string }[];
+};
+
+const SEVERITY_COLOR: Record<Card["severity"], string> = {
+  high: "var(--priority-urgent)",
+  medium: "var(--priority-medium)",
+  low: "var(--muted-foreground)",
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** Returns null for anything that is not a card we can render safely. */
+function parseCard(raw: string): Card | null {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  if (!isRecord(parsed) || typeof parsed.title !== "string") {
+    return null;
+  }
+
+  const severity =
+    parsed.severity === "high" || parsed.severity === "medium"
+      ? parsed.severity
+      : "low";
+
+  const items = Array.isArray(parsed.items)
+    ? parsed.items.flatMap((item) => {
+        if (!isRecord(item) || typeof item.label !== "string") {
+          return [];
+        }
+
+        // Same rule as inline links: internal paths only, so a model cannot
+        // put an outbound URL inside your own product.
+        const href =
+          typeof item.href === "string" &&
+          item.href.startsWith("/") &&
+          !item.href.startsWith("//")
+            ? item.href
+            : undefined;
+
+        return [{ label: item.label, href }];
+      })
+    : undefined;
+
+  return {
+    title: parsed.title,
+    severity,
+    message: typeof parsed.message === "string" ? parsed.message : undefined,
+    items,
+  };
+}
+
+function CardBlock({ card }: { card: Card }) {
+  return (
+    <div className="card-surface my-1 px-3.5 py-3">
+      <p className="flex items-start gap-2 text-sm font-medium text-pretty">
+        <span
+          aria-hidden="true"
+          className="mt-1.5 size-1.5 shrink-0 rounded-full"
+          style={{ background: SEVERITY_COLOR[card.severity] }}
+        />
+        {card.title}
+      </p>
+
+      {card.message ? (
+        <p className="mt-1 pl-3.5 text-sm text-pretty opacity-90">
+          {card.message}
+        </p>
+      ) : null}
+
+      {card.items && card.items.length > 0 ? (
+        <ul className="mt-2 space-y-1 pl-3.5">
+          {card.items.map((item, index) => (
+            <li key={index} className="text-sm">
+              {item.href ? (
+                <Link
+                  href={item.href as Route}
+                  className="inline-flex items-center gap-1 rounded-md bg-foreground/10 px-1.5 py-0.5 font-medium transition-colors hover:bg-foreground/20"
+                >
+                  <span className="truncate">{item.label}</span>
+                  <ArrowUpRightIcon
+                    className="size-3 shrink-0 opacity-60"
+                    aria-hidden="true"
+                  />
+                </Link>
+              ) : (
+                <span className="opacity-90">{item.label}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 type Block =
   | { kind: "paragraph"; lines: string[] }
-  | { kind: "list"; items: string[] };
+  | { kind: "list"; items: string[] }
+  | { kind: "card"; card: Card };
 
-/** Groups lines into paragraphs and bullet runs. */
+/** Groups lines into paragraphs, bullet runs and card fences. */
 function toBlocks(content: string): Block[] {
   const blocks: Block[] = [];
+  // Non-null while inside a ```card fence, collecting its JSON.
+  let cardLines: string[] | null = null;
 
   for (const rawLine of content.split("\n")) {
     const line = rawLine.trimEnd();
+
+    if (cardLines !== null) {
+      if (line.trim().startsWith("```")) {
+        const card = parseCard(cardLines.join("\n"));
+
+        // A fence that did not parse is not dropped — it becomes the text it
+        // always was, so a malformed card costs formatting, never content.
+        blocks.push(
+          card
+            ? { kind: "card", card }
+            : { kind: "paragraph", lines: cardLines },
+        );
+
+        cardLines = null;
+        continue;
+      }
+
+      cardLines.push(line);
+      continue;
+    }
+
+    if (/^```s*cards*$/.test(line.trim())) {
+      cardLines = [];
+      continue;
+    }
     const bullet = /^\s*[-*•]\s+(.*)$/.exec(line);
     const last = blocks.at(-1);
 
@@ -142,8 +290,14 @@ function toBlocks(content: string): Block[] {
     }
   }
 
+  if (cardLines !== null && cardLines.length > 0) {
+    blocks.push({ kind: "paragraph", lines: cardLines });
+  }
+
+  // Drops the empty paragraphs blank lines leave behind. Lists and cards are
+  // never empty by construction.
   return blocks.filter(
-    (block) => block.kind === "list" || block.lines.length > 0,
+    (block) => block.kind !== "paragraph" || block.lines.length > 0,
   );
 }
 
@@ -167,6 +321,8 @@ export function MessageContent({ content }: { content: string }) {
               </li>
             ))}
           </ul>
+        ) : block.kind === "card" ? (
+          <CardBlock key={index} card={block.card} />
         ) : (
           <p key={index} className="text-pretty">
             {block.lines.map((line, lineIndex) => (
