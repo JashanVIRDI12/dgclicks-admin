@@ -142,7 +142,7 @@ async function writeNextOccurrence(
     description: source.description ?? null,
     position: positionAfter(last?.position ?? null),
     priority: source.priority,
-    assignee: source.assignee ?? null,
+    assignees: source.assignees ?? [],
     // Keep the lead time: a task that started a week before it was due should
     // still start a week before the next one.
     startDate:

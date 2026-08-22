@@ -207,6 +207,31 @@ function toRecurrence(
   };
 }
 
+/**
+ * Everyone a task belongs to.
+ *
+ * Falls back to the pre-migration `assignee` field so a document written
+ * before tasks could have several owners still renders its owner rather than
+ * silently appearing unassigned. `scripts/migrate-assignees.mts` moves them
+ * across for good; this keeps the app correct in the window before it runs, and
+ * on any document that script has not reached.
+ */
+function toAssignees(doc: {
+  assignees?: unknown[];
+  assignee?: unknown;
+}): UserSummary[] {
+  const source =
+    doc.assignees && doc.assignees.length > 0
+      ? doc.assignees
+      : doc.assignee
+        ? [doc.assignee]
+        : [];
+
+  return source
+    .map((value) => toUserSummary(value as Parameters<typeof toUserSummary>[0]))
+    .filter((user): user is UserSummary => user !== null);
+}
+
 type TaskSource = {
   _id: Types.ObjectId;
   board: unknown;
@@ -217,6 +242,8 @@ type TaskSource = {
   position: number;
   priority: string;
   mediaType?: string;
+  assignees?: unknown[];
+  /** Pre-migration single owner. See `toAssignees`. */
   assignee?: unknown;
   assignedBy?: unknown;
   startDate?: Date | null;
@@ -250,7 +277,7 @@ export function toTask(doc: TaskSource): Task {
     // Defaulted rather than asserted: tasks written before this field existed
     // carry no value, and a board should not break over a missing enum.
     mediaType: (doc.mediaType ?? "none") as MediaType,
-    assignee: toUserSummary(doc.assignee as Parameters<typeof toUserSummary>[0]),
+    assignees: toAssignees(doc),
     assignedBy: toUserSummary(
       doc.assignedBy as Parameters<typeof toUserSummary>[0],
     ),

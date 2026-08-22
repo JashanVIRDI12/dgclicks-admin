@@ -23,7 +23,7 @@ import {
   setTaskArchivedAction,
 } from "@/features/tasks/actions/task.actions";
 import {
-  AssigneeAvatar,
+  AssigneeStack,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
 import type { Task } from "@/features/tasks/types";
@@ -141,7 +141,7 @@ export function ArchiveList({
             {archivedOn(task.archivedAt)}
           </span>
 
-          <AssigneeAvatar user={task.assignee} />
+          <AssigneeStack users={task.assignees} />
 
           <Button
             variant="ghost"

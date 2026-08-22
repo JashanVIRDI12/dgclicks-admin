@@ -7,6 +7,7 @@ import { UserModel } from "@/features/auth/server/user.model";
 import { isAdminUser } from "@/features/auth/server/users.service";
 import {
   ARCHIVE_COMPLETED_AFTER_HOURS,
+  TASK_ASSIGNEE_LIMIT,
   TASK_SEARCH_LIMIT,
   type MediaType,
   type TaskPriority,
@@ -47,7 +48,7 @@ export type TaskPatch = {
   description?: string | null;
   priority?: TaskPriority;
   mediaType?: MediaType;
-  assigneeId?: string | null;
+  assigneeIds?: string[];
   startDate?: Date | null;
   dueDate?: Date | null;
   labelIds?: string[];
@@ -121,11 +122,13 @@ export async function assertTaskOwnerAccess(
 ): Promise<TaskDoc> {
   const task = await assertTaskEditAccess(taskId, userId);
 
-  if (!task.assignee) {
+  const assignees = task.assignees ?? [];
+
+  if (assignees.length === 0) {
     return task;
   }
 
-  const isInvolved = [task.assignee, task.assignedBy, task.createdBy].some(
+  const isInvolved = [...assignees, task.assignedBy, task.createdBy].some(
     (candidate) => candidate?.toString() === userId,
   );
 
@@ -134,7 +137,7 @@ export async function assertTaskOwnerAccess(
   }
 
   throw new ForbiddenError(
-    "Only the person this is assigned to, or whoever assigned it, can change it.",
+    "Only the people this is assigned to, or whoever assigned it, can change it.",
   );
 }
 
@@ -230,12 +233,37 @@ async function assertLabelsOnBoard(
   return unique.map((id) => new Types.ObjectId(id));
 }
 
-async function assertAssigneeExists(assigneeId: string): Promise<void> {
-  if (!(await UserModel.exists({ _id: assigneeId }))) {
-    throw new ValidationError("Choose an existing person.", {
-      assigneeId: ["That person no longer exists."],
+/**
+ * Checks every assignee in one query and returns them de-duplicated.
+ *
+ * Counted rather than fetched: the ids are all that gets written, so loading
+ * the documents to throw them away would be a wasted round trip on the hot
+ * create path.
+ */
+async function assertAssigneesExist(
+  assigneeIds: string[],
+): Promise<Types.ObjectId[]> {
+  const unique = [...new Set(assigneeIds)];
+
+  if (unique.length === 0) {
+    return [];
+  }
+
+  if (unique.length > TASK_ASSIGNEE_LIMIT) {
+    throw new ValidationError("That is too many people for one task.", {
+      assigneeIds: [`At most ${TASK_ASSIGNEE_LIMIT} people per task.`],
     });
   }
+
+  const found = await UserModel.countDocuments({ _id: { $in: unique } });
+
+  if (found !== unique.length) {
+    throw new ValidationError("Choose existing people.", {
+      assigneeIds: ["One or more of those people no longer exist."],
+    });
+  }
+
+  return unique.map((id) => new Types.ObjectId(id));
 }
 
 /** The board's first column, used when a task is created without one. */
@@ -278,7 +306,7 @@ export async function createTask(
     description?: string | null;
     priority?: TaskPriority;
     mediaType?: MediaType;
-    assigneeId?: string | null;
+    assigneeIds?: string[];
     startDate?: Date | null;
     dueDate?: Date | null;
     labelIds?: string[];
@@ -297,9 +325,9 @@ export async function createTask(
     ? await assertListOnBoard(input.boardId, input.listId)
     : await firstListOfBoard(input.boardId);
 
-  const [labels] = await Promise.all([
+  const [labels, assignees] = await Promise.all([
     assertLabelsOnBoard(input.boardId, input.labelIds ?? []),
-    input.assigneeId ? assertAssigneeExists(input.assigneeId) : null,
+    assertAssigneesExist(input.assigneeIds ?? []),
   ]);
 
   const last = await TaskModel.findOne({
@@ -319,8 +347,8 @@ export async function createTask(
     position: positionAfter(last?.position ?? null),
     priority: input.priority ?? "none",
     mediaType: input.mediaType ?? "none",
-    assignee: input.assigneeId ? new Types.ObjectId(input.assigneeId) : null,
-    assignedBy: input.assigneeId ? new Types.ObjectId(createdById) : null,
+    assignees,
+    assignedBy: assignees.length > 0 ? new Types.ObjectId(createdById) : null,
     // Embedded, so this is part of the same insert rather than a second write.
     // Positions are seeded outright: a task being created has no existing steps
     // to sort against.
@@ -421,22 +449,17 @@ export async function updateTask(
     update.estimateMinutes = patch.estimateMinutes;
   }
 
-  if (patch.assigneeId !== undefined) {
-    if (patch.assigneeId) {
-      await assertAssigneeExists(patch.assigneeId);
-    }
+  if (patch.assigneeIds !== undefined) {
+    const assignees = await assertAssigneesExist(patch.assigneeIds);
 
-    update.assignee = patch.assigneeId
-      ? new Types.ObjectId(patch.assigneeId)
-      : null;
+    update.assignees = assignees;
 
-    // Written from the same branch as the assignee so the two cannot disagree:
-    // whoever made this change is who assigned it, and unassigning leaves nobody
-    // to have assigned it. Recorded here rather than read back out of the
-    // activity feed, which is paged and prunable.
-    update.assignedBy = patch.assigneeId
-      ? new Types.ObjectId(actorId)
-      : null;
+    // Written from the same branch as the assignees so the two cannot disagree:
+    // whoever made this change is who assigned it, and clearing the list leaves
+    // nobody to have assigned it. Recorded here rather than read back out of
+    // the activity feed, which is paged and prunable.
+    update.assignedBy =
+      assignees.length > 0 ? new Types.ObjectId(actorId) : null;
   }
 
   if (patch.labelIds !== undefined) {
@@ -860,7 +883,7 @@ export async function listTasksForUser(options: {
   }
 
   const docs = await TaskModel.find({
-    assignee: options.userId,
+    assignees: options.userId,
     board: { $in: options.boardIds.map((id) => new Types.ObjectId(id)) },
     archivedAt: null,
     ...(options.includeCompleted ? {} : { completedAt: null }),

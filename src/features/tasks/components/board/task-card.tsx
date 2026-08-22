@@ -3,6 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ArchiveIcon,
   CheckSquareIcon,
   CircleIcon,
   GripVerticalIcon,
@@ -13,12 +14,13 @@ import {
 
 import { LabelChip } from "@/features/tasks/components/label-chip";
 import {
-  AssigneeAvatar,
+  AssigneeStack,
   DueDateBadge,
   MediaTypeIcon,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
 import { MEDIA_TYPE_LABELS } from "@/features/tasks/constants";
+import { useArchiveTask } from "@/features/tasks/hooks/use-board";
 import type { Task } from "@/features/tasks/types";
 import { cn } from "@/lib/utils";
 
@@ -54,7 +56,7 @@ export function TaskCard({
     task.commentCount > 0 ||
     task.attachmentCount > 0 ||
     task.recurrence !== null ||
-    task.assignee !== null ||
+    task.assignees.length > 0 ||
     task.assignedBy !== null;
 
   // `none` is a real priority meaning "not triaged", so it gets no edge — a
@@ -74,7 +76,7 @@ export function TaskCard({
           : undefined
       }
       className={cn(
-        "card-surface p-3 pr-8",
+        "card-surface p-3 pr-14",
         // Lift on hover, settle on press. Skipped for the drag overlay, which
         // is already in the air and would otherwise stack two elevations.
         !isOverlay && "card-interactive",
@@ -193,7 +195,7 @@ export function TaskCard({
           ) : null}
 
           <span className="ml-auto">
-            <AssigneeAvatar user={task.assignee} />
+            <AssigneeStack users={task.assignees} />
           </span>
         </div>
       ) : null}
@@ -235,6 +237,8 @@ export function SortableTaskCard({
     disabled: !canDrag,
   });
 
+  const archive = useArchiveTask(task.boardId);
+
   return (
     <div
       ref={setNodeRef}
@@ -251,16 +255,39 @@ export function SortableTaskCard({
       </button>
 
       {canDrag ? (
-        <button
-          ref={setActivatorNodeRef}
-          type="button"
-          {...attributes}
-          {...listeners}
-          aria-label={`Move ${task.title}`}
-          className="absolute top-2 right-2 cursor-grab touch-none rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 active:cursor-grabbing group-hover/task:opacity-100"
-        >
-          <GripVerticalIcon className="size-3.5" aria-hidden="true" />
-        </button>
+        <div className="absolute top-2 right-2 flex items-center gap-0.5">
+          {/*
+            Archiving from the board, so putting something away does not mean
+            opening it first. Deliberately archive and not delete: it is one
+            click on a card somebody might have grabbed by accident, and it is
+            reversible from the toast and from the Archive page. Permanent
+            deletion stays where it was, behind the archive and an admin.
+          */}
+          <button
+            type="button"
+            onClick={(event) => {
+              // The card behind this is a button that opens the drawer.
+              event.stopPropagation();
+              archive.mutate({ id: task.id, title: task.title });
+            }}
+            disabled={archive.isPending}
+            aria-label={`Archive ${task.title}`}
+            className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 disabled:opacity-40 group-hover/task:opacity-100"
+          >
+            <ArchiveIcon className="size-3.5" aria-hidden="true" />
+          </button>
+
+          <button
+            ref={setActivatorNodeRef}
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={`Move ${task.title}`}
+            className="cursor-grab touch-none rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 active:cursor-grabbing group-hover/task:opacity-100"
+          >
+            <GripVerticalIcon className="size-3.5" aria-hidden="true" />
+          </button>
+        </div>
       ) : null}
     </div>
   );

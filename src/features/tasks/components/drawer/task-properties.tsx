@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { UserSummary } from "@/features/auth/types";
+import { AssigneePicker } from "@/features/tasks/components/assignee-picker";
 import { LabelPicker } from "@/features/tasks/components/drawer/label-picker";
 import { RecurrenceEditor } from "@/features/tasks/components/drawer/recurrence-editor";
 import {
@@ -60,7 +61,6 @@ import {
 import type { Label, TaskDetail } from "@/features/tasks/types";
 import { cn } from "@/lib/utils";
 
-const UNASSIGNED = "__unassigned__";
 
 /**
  * One property, label left, control right.
@@ -303,40 +303,20 @@ export function TaskProperties({
         </Row>
       ) : null}
 
-      <Row icon={UserIcon} label="Assignee">
-        <Select
-          value={task.assignee?.id ?? UNASSIGNED}
-          onValueChange={(value) =>
-            update.mutate({
-              id: task.id,
-              assigneeId: value === UNASSIGNED ? null : value,
-            })
+      <Row icon={UserIcon} label="Assignees">
+        {/*
+          Absence reads muted here as it does in every other row, so
+          "Unassigned", "No due date" and "Add labels" look like the same kind
+          of nothing rather than three different states.
+        */}
+        <AssigneePicker
+          triggerId="task-assignees"
+          members={members}
+          selectedIds={task.assignees.map((person) => person.id)}
+          onChange={(assigneeIds) =>
+            update.mutate({ id: task.id, assigneeIds })
           }
-        >
-          <SelectTrigger
-            size="sm"
-            className={BARE_CONTROL}
-            aria-label="Assignee"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {/*
-              Absence reads muted everywhere in this block, so "Unassigned",
-              "No due date" and "Add labels" look like the same kind of nothing
-              rather than three different states.
-            */}
-            <SelectItem value={UNASSIGNED}>
-              <span className="text-muted-foreground">Unassigned</span>
-            </SelectItem>
-            {members.map((member) => (
-              <SelectItem key={member.id} value={member.id}>
-                <AssigneeAvatar user={member} className="size-4" />
-                {member.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       </Row>
 
       {/*
@@ -344,10 +324,11 @@ export function TaskProperties({
         rewrites this to whoever made that change, so the row can never credit
         an assignment that has since been handed on.
       */}
-      {task.assignee && task.assignedBy ? (
+      {task.assignees.length > 0 && task.assignedBy ? (
         <Row icon={UserCheckIcon} label="Assigned by">
           <span className="inline-flex h-7 items-center gap-1.5 px-2 text-sm">
-            {task.assignedBy.id === task.assignee.id ? (
+            {task.assignees.length === 1 &&
+            task.assignedBy.id === task.assignees[0]?.id ? (
               <span className="text-muted-foreground">
                 Self-assigned
               </span>

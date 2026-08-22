@@ -53,7 +53,7 @@ type ScanTask = {
   list: Types.ObjectId;
   title: string;
   priority: string;
-  assignee?: Types.ObjectId | null;
+  assignees?: Types.ObjectId[];
   dueDate?: Date | null;
   updatedAt: Date;
 };
@@ -102,7 +102,7 @@ export async function getWorkspaceSignals(
       archivedAt: null,
       completedAt: null,
     })
-      .select("board list title priority assignee dueDate updatedAt")
+      .select("board list title priority assignees dueDate updatedAt")
       .limit(SCAN_LIMIT)
       .lean<ScanTask[]>(),
 
@@ -150,7 +150,7 @@ export async function getWorkspaceSignals(
       }
     }
 
-    if (!task.assignee) {
+    if ((task.assignees ?? []).length === 0) {
       signals.unassigned.count += 1;
 
       if (task.priority === "urgent" || task.priority === "high") {
@@ -161,8 +161,13 @@ export async function getWorkspaceSignals(
         }
       }
     } else {
-      const key = task.assignee.toString();
-      openByPerson.set(key, (openByPerson.get(key) ?? 0) + 1);
+      // Counted against everyone on it: a task two people share is real work
+      // sitting in both their queues, and crediting only the first would
+      // under-report whoever happens to be listed second.
+      for (const assignee of task.assignees ?? []) {
+        const key = assignee.toString();
+        openByPerson.set(key, (openByPerson.get(key) ?? 0) + 1);
+      }
     }
 
     if (!isTerminal && task.updatedAt < stallCutoff) {

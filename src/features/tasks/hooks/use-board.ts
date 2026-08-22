@@ -19,6 +19,7 @@ import {
   deleteTaskAction,
   moveTaskAction,
   setTaskCompleteAction,
+  setTaskArchivedAction,
   setTaskAssetReadyAction,
   setTaskRecurrenceAction,
   updateTaskAction,
@@ -55,7 +56,7 @@ export type TaskPatchInput = {
   description?: string | null;
   priority?: TaskPriority;
   mediaType?: MediaType;
-  assigneeId?: string | null;
+  assigneeIds?: string[];
   startDate?: Date | null;
   dueDate?: Date | null;
   labelIds?: string[];
@@ -390,6 +391,77 @@ export function useSetTaskComplete(boardId: string) {
  * on the server from the session, and guessing it here would briefly show a
  * name that the save might not agree with.
  */
+/**
+ * Archives a task straight from the board, or puts it back.
+ *
+ * The server action is a toggle, which is what makes undo free: the same call
+ * with the same id reverses it, so the toast below does not need a second
+ * endpoint or a remembered previous state.
+ *
+ * Optimistic removal rather than a patch. An archived task is not a card in a
+ * different state, it is a card that is no longer on the board, and leaving it
+ * in place until the server replies makes the click look like it failed.
+ */
+export function useArchiveTask(boardId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { id: string; title: string }) => {
+      const result = await setTaskArchivedAction({ id: input.id });
+
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+
+      return result.data;
+    },
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: boardKey(boardId) });
+
+      const previous = queryClient.getQueryData<BoardSnapshot>(
+        boardKey(boardId),
+      );
+
+      queryClient.setQueryData<BoardSnapshot>(boardKey(boardId), (current) =>
+        current
+          ? {
+              ...current,
+              tasks: current.tasks.filter((task) => task.id !== input.id),
+            }
+          : current,
+      );
+
+      return { previous };
+    },
+    onError: (error, _input, context) => {
+      restore(queryClient, boardId, context?.previous);
+      toast.error(error.message);
+    },
+    onSuccess: (task, input) => {
+      toast.success(`${input.title} archived.`, {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            void setTaskArchivedAction({ id: task.id }).then((result) => {
+              if (!result.ok) {
+                toast.error(result.error);
+                return;
+              }
+
+              void queryClient.invalidateQueries({
+                queryKey: boardKey(boardId),
+              });
+            });
+          },
+        },
+      });
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: boardKey(boardId) });
+    },
+  });
+}
+
 export function useSetTaskAssetReady(boardId: string) {
   const queryClient = useQueryClient();
 
@@ -611,7 +683,7 @@ export function useCreateTask(boardId: string) {
       description?: string | null;
       priority?: TaskPriority;
       mediaType?: MediaType;
-      assigneeId?: string | null;
+      assigneeIds?: string[];
       startDate?: Date | null;
       dueDate?: Date | null;
       labelIds?: string[];

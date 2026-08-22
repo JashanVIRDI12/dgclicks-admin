@@ -61,6 +61,7 @@ import {
   LABEL_COLORS,
   MEDIA_TYPES,
   RECURRENCE_FREQUENCIES,
+  TASK_ASSIGNEE_LIMIT,
   TASK_PRIORITIES,
 } from "@/features/tasks/constants";
 import {
@@ -628,7 +629,7 @@ const tools = [
       description: z.string().trim().max(20_000).nullable().optional(),
       priority: z.enum(TASK_PRIORITIES).optional(),
       mediaType: z.enum(MEDIA_TYPES).optional(),
-      assigneeId: objectId.nullable().optional(),
+      assigneeIds: z.array(objectId).max(TASK_ASSIGNEE_LIMIT).optional(),
       startDate: z.iso.datetime().nullable().optional(),
       dueDate: z.iso.datetime().nullable().optional(),
       labelIds: z.array(objectId).max(40).optional(),
@@ -656,7 +657,7 @@ const tools = [
       description: z.string().trim().max(20_000).nullable().optional(),
       priority: z.enum(TASK_PRIORITIES).optional(),
       mediaType: z.enum(MEDIA_TYPES).optional(),
-      assigneeId: objectId.nullable().optional(),
+      assigneeIds: z.array(objectId).max(TASK_ASSIGNEE_LIMIT).optional(),
       startDate: z.iso.datetime().nullable().optional(),
       dueDate: z.iso.datetime().nullable().optional(),
       labelIds: z.array(objectId).max(40).optional(),

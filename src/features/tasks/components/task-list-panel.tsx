@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { LabelDot } from "@/features/tasks/components/label-chip";
 import {
-  AssigneeAvatar,
+  AssigneeStack,
   DueDateBadge,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
@@ -102,7 +102,7 @@ export function TaskListPanel({
                   />
                 ) : null}
 
-                <AssigneeAvatar user={task.assignee} />
+                <AssigneeStack users={task.assignees} />
               </Link>
             </li>
           ))}

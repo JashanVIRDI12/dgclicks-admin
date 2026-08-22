@@ -30,11 +30,18 @@ export type Palette = {
 
 export const PALETTES: readonly Palette[] = [
   {
+    id: "vercel",
+    name: "Vercel",
+    hue: 254,
+    chroma: 0.21,
+    description: "One electric blue against true neutrals. The default.",
+  },
+  {
     id: "midnight",
     name: "Midnight",
     hue: 272,
     chroma: 0.2,
-    description: "Deep indigo. The default.",
+    description: "Deep indigo.",
   },
   {
     id: "aurora",
@@ -87,7 +94,7 @@ export const PALETTES: readonly Palette[] = [
   },
 ];
 
-export const DEFAULT_PALETTE_ID = "midnight";
+export const DEFAULT_PALETTE_ID = "vercel";
 
 export function findPalette(id: string): Palette | undefined {
   return PALETTES.find((palette) => palette.id === id);

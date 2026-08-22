@@ -7,7 +7,6 @@ import {
   ListChecksIcon,
   MessageSquareIcon,
   RepeatIcon,
-  UserIcon,
   XIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -41,9 +40,9 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import type { UserSummary } from "@/features/auth/types";
+import { AssigneePicker } from "@/features/tasks/components/assignee-picker";
 import { LabelPicker } from "@/features/tasks/components/drawer/label-picker";
 import {
-  AssigneeAvatar,
   MediaTypeIcon,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
@@ -63,7 +62,6 @@ import {
 } from "@/features/tasks/schemas/task.schema";
 import type { Label } from "@/features/tasks/types";
 
-const UNASSIGNED = "__unassigned__";
 const DOES_NOT_REPEAT = "__none__";
 const CREATE_RECURRENCE_FREQUENCIES = RECURRENCE_FREQUENCIES.filter(
   (frequency) => frequency !== "custom",
@@ -74,7 +72,7 @@ const DEFAULT_VALUES: CreateTaskFormValues = {
   description: "",
   priority: "none",
   mediaType: "none",
-  assigneeId: null,
+  assigneeIds: [],
   startDate: null,
   dueDate: null,
   labelIds: [],
@@ -247,7 +245,7 @@ export function CreateTaskSheet({
         description: values.description || null,
         priority: values.priority,
         mediaType: values.mediaType,
-        assigneeId: values.assigneeId,
+        assigneeIds: values.assigneeIds,
         startDate: localDate(values.startDate),
         dueDate,
         labelIds: values.labelIds,
@@ -377,32 +375,19 @@ export function CreateTaskSheet({
 
                 <Controller
                   control={form.control}
-                  name="assigneeId"
+                  name="assigneeIds"
                   render={({ field }) => (
                     <Field>
-                      <FieldLabel htmlFor="new-task-assignee">Assignee</FieldLabel>
-                      <Select
-                        value={field.value ?? UNASSIGNED}
-                        onValueChange={(value) =>
-                          field.onChange(value === UNASSIGNED ? null : value)
-                        }
-                      >
-                        <SelectTrigger id="new-task-assignee" className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={UNASSIGNED}>
-                            <UserIcon className="size-3.5 text-muted-foreground" />
-                            Unassigned
-                          </SelectItem>
-                          {members.map((member) => (
-                            <SelectItem key={member.id} value={member.id}>
-                              <AssigneeAvatar user={member} className="size-4" />
-                              {member.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FieldLabel htmlFor="new-task-assignees">
+                        Assignees
+                      </FieldLabel>
+                      <AssigneePicker
+                        triggerId="new-task-assignees"
+                        members={members}
+                        selectedIds={field.value}
+                        onChange={field.onChange}
+                        className="h-9 w-full rounded-md border px-3"
+                      />
                     </Field>
                   )}
                 />

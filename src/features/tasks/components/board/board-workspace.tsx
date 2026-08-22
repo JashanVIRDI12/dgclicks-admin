@@ -39,7 +39,7 @@ function matchesFilters(task: Task, filters: BoardFilters): boolean {
 
   if (
     filters.assigneeIds.length > 0 &&
-    !(task.assignee && filters.assigneeIds.includes(task.assignee.id))
+    !task.assignees.some((person) => filters.assigneeIds.includes(person.id))
   ) {
     return false;
   }

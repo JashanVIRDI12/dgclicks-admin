@@ -19,7 +19,7 @@ import { USER_SUMMARY_SELECT } from "@/features/auth/server/serialize";
  * a `readonly` array, so `as const` here would be a compile error at every call.
  */
 export const TASK_POPULATE: PopulateOptions[] = [
-  { path: "assignee", select: USER_SUMMARY_SELECT },
+  { path: "assignees", select: USER_SUMMARY_SELECT },
   { path: "labels", select: "board name color" },
   { path: "assignedBy", select: USER_SUMMARY_SELECT },
   // On the card read rather than the drawer's, because the content calendar

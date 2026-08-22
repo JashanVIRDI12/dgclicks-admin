@@ -20,7 +20,7 @@ import {
 import { boardKey } from "@/features/tasks/hooks/use-board";
 import { taskKey } from "@/features/tasks/hooks/use-task-workspace";
 import {
-  AssigneeAvatar,
+  AssigneeStack,
   DueDateBadge,
 } from "@/features/tasks/components/task-meta";
 import { celebrateTaskCompletion } from "@/features/tasks/components/task-celebration";
@@ -168,7 +168,7 @@ export function SubtaskSection({
                   />
                 ) : null}
 
-                <AssigneeAvatar user={subtask.assignee} />
+                <AssigneeStack users={subtask.assignees} />
               </li>
             );
           })}

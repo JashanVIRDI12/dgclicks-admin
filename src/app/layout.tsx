@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 
 import { siteConfig } from "@/config/site";
 import { APPEARANCE_INIT_SCRIPT } from "@/features/appearance/appearance-provider";
@@ -17,6 +17,21 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
+});
+
+/**
+ * Headings only.
+ *
+ * Space Grotesk's tighter apertures and squarer terminals give a title weight
+ * Geist does not, and the two share enough of a grotesque skeleton that the
+ * pairing reads as one voice rather than two fonts. Kept off body copy on
+ * purpose: it is a display face, and a paragraph of it is harder to read than
+ * the same paragraph in Geist.
+ */
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-heading",
   display: "swap",
 });
 
@@ -59,6 +74,7 @@ export default function RootLayout({
           "min-h-svh font-sans antialiased",
           geistSans.variable,
           geistMono.variable,
+          spaceGrotesk.variable,
         )}
       >
         <Providers>{children}</Providers>

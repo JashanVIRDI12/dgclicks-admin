@@ -10,6 +10,7 @@ import {
   ShieldAlertIcon,
   SparklesIcon,
   SquarePenIcon,
+  UserIcon,
   XIcon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -17,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AiLoader } from "@/components/ui/ai-loader";
+import { LoadingState } from "@/components/ui/loading-state";
 import { Button } from "@/components/ui/button";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import {
@@ -300,7 +302,7 @@ export function AssistantPanel({
         <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto px-4 py-5">
           {threadQuery.isPending && !isStartingOver ? (
             <div className="flex h-full items-center justify-center">
-              <AiLoader label="Loading assistant conversation" />
+              <LoadingState label="Loading conversation" variant="Dots" />
             </div>
           ) : threadQuery.isError && !isStartingOver ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
@@ -342,10 +344,11 @@ export function AssistantPanel({
               ) : null}
 
               {isBusy ? (
-                <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                  <AiLoader label="Assistant is working" className="size-7" />
-                  Planning and working…
-                </div>
+                <LoadingState
+                  label={confirmation ? "Waiting on you" : "Working"}
+                  variant={confirmation ? "Orbit" : "Drive"}
+                  className="pl-9"
+                />
               ) : null}
             </div>
           )}
@@ -527,7 +530,7 @@ function MessageBubble({
           {isAssistant ? (
             <BotIcon className="size-3.5" aria-hidden="true" />
           ) : (
-            <SparklesIcon className="size-3.5" aria-hidden="true" />
+            <UserIcon className="size-3.5" aria-hidden="true" />
           )}
         </div>
 

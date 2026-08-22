@@ -139,6 +139,67 @@ export function AssigneeAvatar({
   );
 }
 
+/**
+ * Everyone a task belongs to, as an overlapping stack.
+ *
+ * Overlapped rather than spaced because the row it sits in has room for one
+ * avatar and has to survive five. Past `max` the rest collapse into a "+N"
+ * chip whose tooltip still names them, so the full list is always reachable
+ * without opening the card.
+ *
+ * Renders nothing when the list is empty, exactly as the single avatar it
+ * replaced returned null for an unassigned task — an empty circle is a worse
+ * answer than no circle.
+ */
+export function AssigneeStack({
+  users,
+  max = 3,
+  className,
+  avatarClassName,
+}: {
+  users: UserSummary[];
+  max?: number;
+  className?: string;
+  avatarClassName?: string;
+}) {
+  if (users.length === 0) {
+    return null;
+  }
+
+  const shown = users.slice(0, max);
+  const overflow = users.slice(max);
+
+  return (
+    <span
+      className={cn("flex shrink-0 items-center -space-x-1.5", className)}
+      title={users.map((user) => user.name).join(", ")}
+    >
+      {shown.map((user) => (
+        <AssigneeAvatar
+          key={user.id}
+          user={user}
+          className={cn("ring-2 ring-background", avatarClassName)}
+        />
+      ))}
+
+      {overflow.length > 0 ? (
+        <span
+          className={cn(
+            "grid size-5 place-items-center rounded-full bg-muted text-[0.5625rem] font-medium text-muted-foreground ring-2 ring-background",
+            avatarClassName,
+          )}
+        >
+          +{overflow.length}
+        </span>
+      ) : null}
+
+      <span className="sr-only">
+        Assigned to {users.map((user) => user.name).join(", ")}
+      </span>
+    </span>
+  );
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Midnight-to-midnight difference, so "tomorrow" does not depend on the hour. */

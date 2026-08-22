@@ -239,6 +239,16 @@ export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
   copy: "Copy only",
 };
 
+/**
+ * How many people one task may be assigned to.
+ *
+ * Bounded because the card renders an avatar stack and the permission check
+ * walks the list on every write. Ten is far past the point where shared
+ * ownership stops meaning anything, so it constrains the pathological case
+ * without ever being reached by real use.
+ */
+export const TASK_ASSIGNEE_LIMIT = 10;
+
 export const BOARD_LABEL_LIMIT = 40;
 export const TASK_SEARCH_LIMIT = 8;
 

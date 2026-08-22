@@ -79,7 +79,8 @@ function auditShape(task: Task) {
     title: task.title,
     priority: task.priority,
     mediaType: task.mediaType,
-    assignee: task.assignee?.name ?? null,
+    assignees:
+      task.assignees.map((person) => person.name).join(", ") || null,
     dueDate: task.dueDate,
     startDate: task.startDate,
     estimateMinutes: task.estimateMinutes,
@@ -150,7 +151,7 @@ export const updateTaskAction = createAction({
         "title",
         "priority",
         "mediaType",
-        "assignee",
+        "assignees",
         "dueDate",
         "startDate",
         "estimateMinutes",

@@ -1,16 +1,17 @@
 "use client";
 
-import { ChevronRightIcon } from "lucide-react";
+import { ArchiveIcon, ChevronRightIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { checklistProgress } from "@/features/tasks/components/board/task-card";
 import { LabelDot } from "@/features/tasks/components/label-chip";
 import {
-  AssigneeAvatar,
+  AssigneeStack,
   DueDateBadge,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
+import { useArchiveTask } from "@/features/tasks/hooks/use-board";
 import type { BoardSnapshot, List, Task } from "@/features/tasks/types";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ function TaskRow({
 }) {
   const isComplete = task.completedAt !== null;
   const checklist = checklistProgress(task);
+  const archive = useArchiveTask(task.boardId);
 
   return (
     <div
@@ -48,7 +50,7 @@ function TaskRow({
         }
       }}
       className={cn(
-        "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent/60",
+        "group/row flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent/60",
         isComplete && "opacity-60",
       )}
     >
@@ -95,9 +97,26 @@ function TaskRow({
         />
       ) : null}
 
-      <span className="w-5 shrink-0">
-        <AssigneeAvatar user={task.assignee} />
+      <span className="shrink-0">
+        <AssigneeStack users={task.assignees} />
       </span>
+
+      {/* Same one-click archive the board card offers, so a row and a card
+          put something away the same way. Reversible from the toast. */}
+      {canEdit ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            archive.mutate({ id: task.id, title: task.title });
+          }}
+          disabled={archive.isPending}
+          aria-label={`Archive ${task.title}`}
+          className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 disabled:opacity-40 group-hover/row:opacity-100"
+        >
+          <ArchiveIcon className="size-3.5" aria-hidden="true" />
+        </button>
+      ) : null}
 
       <ChevronRightIcon
         className="size-4 shrink-0 text-muted-foreground/50"

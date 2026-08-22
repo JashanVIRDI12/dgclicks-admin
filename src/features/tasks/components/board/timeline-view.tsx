@@ -17,7 +17,7 @@ import { CalendarOffIcon } from "lucide-react";
 import { EmptyState } from "@/components/common/empty-state";
 import { LabelDot } from "@/features/tasks/components/label-chip";
 import {
-  AssigneeAvatar,
+  AssigneeStack,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
 import type { Task } from "@/features/tasks/types";
@@ -168,7 +168,11 @@ export function TimelineView({
                     {task.title}
                   </span>
                   <span className="ml-auto shrink-0">
-                    <AssigneeAvatar user={task.assignee} className="size-4" />
+                    <AssigneeStack
+                      users={task.assignees}
+                      max={2}
+                      avatarClassName="size-4"
+                    />
                   </span>
                 </button>
               </div>

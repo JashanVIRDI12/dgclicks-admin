@@ -31,7 +31,7 @@ const FIELD_LABELS: Record<string, string> = {
   title: "title",
   description: "description",
   priority: "priority",
-  assignee: "assignee",
+  assignees: "assignees",
   dueDate: "due date",
   startDate: "start date",
   estimateMinutes: "estimate",

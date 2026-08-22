@@ -324,7 +324,15 @@ const taskSchema = new Schema(
       required: true,
       default: "none",
     },
-    assignee: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    /**
+     * Everyone the task belongs to.
+     *
+     * An array rather than one ref: real work is often shared, and the single
+     * `assignee` this replaced forced a team to pick a token owner and track
+     * the rest in the description. An empty array means nobody has picked it
+     * up — the state the old `null` carried.
+     */
+    assignees: [{ type: Schema.Types.ObjectId, ref: "User" }],
     /** What this piece of content is. `none` for work that is not content. */
     mediaType: {
       type: String,
@@ -333,7 +341,7 @@ const taskSchema = new Schema(
       default: "none",
     },
     /**
-     * Who handed the task to its assignee. Cleared alongside the assignee, so it
+     * Who handed the task out. Cleared when the last assignee is removed, so it
      * can never name the person who set an assignment that no longer exists.
      */
     assignedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
@@ -384,7 +392,9 @@ taskSchema.index({ board: 1, parent: 1, archivedAt: 1, list: 1, position: 1 });
 // Calendar and timeline.
 taskSchema.index({ board: 1, dueDate: 1 });
 // My Tasks and the dashboard's due/overdue panels.
-taskSchema.index({ assignee: 1, completedAt: 1, dueDate: 1 });
+// Multikey over `assignees`: Mongo indexes each element, so "my open work,
+// soonest first" stays one index scan whether a task has one owner or five.
+taskSchema.index({ assignees: 1, completedAt: 1, dueDate: 1 });
 // A parent's subtasks.
 taskSchema.index({ parent: 1 });
 // The recurrence catch-up sweep.

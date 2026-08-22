@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Route } from "next";
 
 import {
-  AssigneeAvatar,
+  AssigneeStack,
   DueDateBadge,
   PriorityIcon,
 } from "@/features/tasks/components/task-meta";
@@ -135,7 +135,7 @@ export function DashboardHero({
               />
             ) : null}
 
-            <AssigneeAvatar user={startHere.assignee} />
+            <AssigneeStack users={startHere.assignees} />
 
             <ArrowRightIcon
               className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"

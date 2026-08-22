@@ -49,7 +49,7 @@ function toObjectIds(ids: readonly string[]): Types.ObjectId[] {
  * filtered in memory.
  *
  * Each has a different sort and a different limit, and every one of them is
- * served by the `{ assignee, completedAt, dueDate }` or `{ board, dueDate }`
+ * served by the `{ assignees, completedAt, dueDate }` or `{ board, dueDate }`
  * index — pulling the whole workspace back to slice it locally would get slower
  * exactly as the workspace got busier.
  */
@@ -88,7 +88,7 @@ export async function getDashboardData(options: {
    * workspace-wide view of the same question is what Reports and the board
    * filters are for.
    */
-  const mine = { ...open, assignee: options.userId };
+  const mine = { ...open, assignees: options.userId };
 
   // Weeks run Monday to Monday. `addDays(now, -7)` would slide the boundary
   // every day and make "this week" mean "the last seven days", which is a
@@ -156,14 +156,14 @@ export async function getDashboardData(options: {
     TaskModel.countDocuments({
       board: boards,
       parent: null,
-      assignee: options.userId,
+      assignees: options.userId,
       completedAt: { $gte: weekStart },
     }),
 
     TaskModel.countDocuments({
       board: boards,
       parent: null,
-      assignee: options.userId,
+      assignees: options.userId,
       completedAt: { $gte: lastWeekStart, $lt: weekStart },
     }),
   ]);
@@ -314,7 +314,11 @@ export async function getWorkspaceReport(options: {
 
       TaskModel.aggregate<CountRow>([
         { $match: match },
-        { $group: { _id: "$assignee", ...counts } },
+        // Unwound so a task with three owners lands once in each of their
+        // totals. Grouping on the raw array would key by the whole list and
+        // report "these three people" as a fourth, imaginary person.
+        { $unwind: "$assignees" },
+        { $group: { _id: "$assignees", ...counts } },
       ]),
 
       // Upcoming work, so this one *does* want only what is still on a board.

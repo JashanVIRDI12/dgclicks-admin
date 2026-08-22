@@ -115,9 +115,10 @@ export type Task = {
   priority: TaskPriority;
   /** What the content is: reel, photo, carousel… `none` when not content. */
   mediaType: MediaType;
-  assignee: UserSummary | null;
+  /** Everyone the task belongs to. Empty means nobody has picked it up. */
+  assignees: UserSummary[];
   /**
-   * Who handed the task to its assignee. Null when nobody is assigned.
+   * Who handed the task out. Null when nobody is assigned.
    *
    * On the card rather than only in the drawer, which costs one extra
    * `populate` on the board read — accepted because Mongoose batches a
@@ -156,7 +157,7 @@ export type Task = {
  * board query — the one read that has to stay fast.
  */
 export type TaskDetail = Task & {
-  /** Who gave the task to its assignee. Null when nobody is assigned. */
+  /** Who gave the task out. Null when nobody is assigned. */
   assignedBy: UserSummary | null;
   timeEntries: TimeEntry[];
   subtasks: Task[];

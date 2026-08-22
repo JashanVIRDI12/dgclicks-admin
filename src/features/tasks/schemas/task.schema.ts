@@ -4,6 +4,7 @@ import {
   BOARD_LABEL_LIMIT,
   LIMITS,
   MEDIA_TYPES,
+  TASK_ASSIGNEE_LIMIT,
   RECURRENCE_FREQUENCIES,
   SUBTASK_CREATE_LIMIT,
   TASK_PRIORITIES,
@@ -70,7 +71,9 @@ export const taskFieldsSchema = z.object({
   description: taskDescriptionSchema.nullable(),
   priority: z.enum(TASK_PRIORITIES),
   mediaType: z.enum(MEDIA_TYPES),
-  assigneeId: objectId.nullable(),
+  assigneeIds: z
+    .array(objectId)
+    .max(TASK_ASSIGNEE_LIMIT, `At most ${TASK_ASSIGNEE_LIMIT} people per task.`),
   startDate: dateInput.nullable(),
   dueDate: dateInput.nullable(),
   labelIds: z
@@ -185,7 +188,9 @@ export const createTaskFormSchema = z
     description: taskDescriptionSchema,
     priority: z.enum(TASK_PRIORITIES),
     mediaType: z.enum(MEDIA_TYPES),
-    assigneeId: objectId.nullable(),
+    assigneeIds: z
+      .array(objectId)
+      .max(TASK_ASSIGNEE_LIMIT, `At most ${TASK_ASSIGNEE_LIMIT} people per task.`),
     startDate: optionalDateString,
     dueDate: optionalDateString,
     labelIds: z

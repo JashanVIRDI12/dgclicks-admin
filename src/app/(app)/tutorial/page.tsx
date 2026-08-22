@@ -147,6 +147,25 @@ export default async function TutorialPage() {
             management they had along with them.
           </Note>
 
+          <Note title="Putting a task away">
+            Hover a card on the board, or a row in list view, and an archive
+            button appears beside the drag handle. One click takes it off the
+            board, and the toast that follows has an <strong>Undo</strong> if
+            that was not what you meant. Archived work is never lost — it stays
+            on the Archive page, still counts towards your totals, and can be
+            restored from there. Permanent deletion lives only on that page, and
+            only administrators can do it.
+          </Note>
+
+          <Note title="A task can belong to several people">
+            Assign as many people as the work actually needs — the card shows
+            them as a stack of avatars, and the task appears in My Tasks for
+            every one of them. Once anybody is assigned, only those people, whoever
+            assigned it and administrators can change the task itself; everyone
+            else on the board can still comment, log time and move it between
+            columns.
+          </Note>
+
           <Note title="A board can be narrower than its workspace">
             Boards are open to everyone in the workspace by default. Whoever
             manages the workspace can restrict editing to named people from the
@@ -168,7 +187,7 @@ export default async function TutorialPage() {
               "Add a card with the + at the foot of any column. A panel opens on the right, and a title is the only thing it asks for.",
               "Drag a card to another column to move it. The position is saved as soon as you let go.",
               "Drag a column by the handle to its left to reorder the board.",
-              "Use the Filter button to narrow by priority, assignee or label. Filtering is instant — it never reloads the board.",
+              "Use the Filter button to narrow by priority, assignee or label. Picking a person shows everything they are on, including tasks they share. Filtering is instant — it never reloads the board.",
               "The gear beside the board's name holds the board itself: its name, icon and colour, and archiving it.",
             ]}
           />
@@ -195,7 +214,7 @@ export default async function TutorialPage() {
           lede="One required field. The rest can wait — or be done now."
         >
           <p className="text-sm text-pretty text-muted-foreground">
-            A title is all a task needs. Description, priority, assignee, start
+            A title is all a task needs. Description, priority, assignees, start
             and due dates, an estimate, labels, a repeat and subtasks are all on
             the same panel, and all optional — fill in what you know and leave
             the rest.
@@ -241,7 +260,7 @@ export default async function TutorialPage() {
           </Note>
 
           <p className="text-sm text-pretty text-muted-foreground">
-            Under the assignee, <span className="font-medium text-foreground">
+            Under the assignees, <span className="font-medium text-foreground">
             Assigned by</span> shows who handed the task over. Reassigning it
             rewrites that to whoever made the change, so it always names the
             person behind the current assignment rather than the first one — and
@@ -268,7 +287,7 @@ export default async function TutorialPage() {
             <Card>
               <p className="text-sm font-medium">Subtask</p>
               <p className="mt-1 text-sm text-pretty text-muted-foreground">
-                A real task with its own assignee, due date and priority — for
+                A real task with its own assignees, due date and priority — for
                 work you need to hand to someone else.
               </p>
             </Card>
@@ -297,7 +316,7 @@ export default async function TutorialPage() {
 
           <Note title="The next one appears when you finish this one">
             Completing a repeating task creates the next occurrence immediately
-            — with the same description, labels, assignee and checklist, ticks
+            — with the same description, labels, assignees and checklist, ticks
             cleared. Comments, files and logged time stay with the occurrence
             they belong to.
           </Note>
